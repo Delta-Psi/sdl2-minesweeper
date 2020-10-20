@@ -1566,6 +1566,7 @@ dependencies = [
 name = "wgpu-minecraft"
 version = "0.1.0"
 dependencies = [
+ "futures",
  "rand",
  "wgpu",
  "winit",
