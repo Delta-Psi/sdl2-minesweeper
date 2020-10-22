@@ -2,13 +2,13 @@ use winit::{
     event_loop::EventLoop,
     window::{Window, WindowBuilder},
 };
-use wgpu::{Surface, Device, Queue, SwapChain, SwapChainDescriptor};
+use wgpu::{Surface, Device, Queue, SwapChain, SwapChainDescriptor, Texture, TextureView};
 
 use crate::shaders;
 
 const WINDOW_WIDTH: u32 = 640;
 const WINDOW_HEIGHT: u32 = 480;
-pub(crate) const TEXTURE_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8Unorm;
+pub(crate) const TEXTURE_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
 
 #[derive(Debug)]
 pub struct Display {
@@ -110,6 +110,44 @@ impl Display {
         let renderer = self.renderer();
         render_fn(renderer);
     }
+
+    /// Expects data in row major 8-bit RGBA format (sRGB)
+    pub fn create_texture(&self, data: &[u8], width: u32, height: u32) -> Texture {
+        let texture = self.device.create_texture(&wgpu::TextureDescriptor {
+            label: None,
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
+        });
+
+        self.queue.write_texture(
+            wgpu::TextureCopyView {
+                texture: &texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+            },
+            &data,
+            wgpu::TextureDataLayout {
+                offset: 0,
+                bytes_per_row: 4 * width,
+                rows_per_image: 0,
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth: 1,
+            },
+        );
+
+        texture
+    }
 }
 
 use wgpu::SwapChainFrame;
@@ -123,8 +161,34 @@ pub struct Renderer<'a> {
 }
 
 impl<'a> Renderer<'a> {
-    pub fn draw_rect(&self, origin: (f32, f32), bounds: (f32, f32), color: (f32, f32, f32)) {
-        self.rect_pipeline.draw_rect(&self, origin, bounds, color);
+    pub fn clear(&self, color: (f32, f32, f32)) {
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        {
+            let _rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                color_attachments: &[
+                    wgpu::RenderPassColorAttachmentDescriptor {
+                        attachment: &self.frame.output.view,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(wgpu::Color {
+                                r: color.0 as f64,
+                                g: color.1 as f64,
+                                b: color.2 as f64,
+                                a: 1.0,
+                            }),
+                            store: true,
+                        },
+                    },
+                ],
+                depth_stencil_attachment: None,
+            });
+        }
+
+        self.queue.submit(Some(encoder.finish()));
+    }
+
+    pub fn draw_rect(&self, origin: (f32, f32), bounds: (f32, f32), texture_view: &TextureView) {
+        self.rect_pipeline.draw_rect(&self, origin, bounds, texture_view);
     }
 }
 

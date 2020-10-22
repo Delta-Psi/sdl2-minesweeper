@@ -6,6 +6,9 @@ use display::Display;
 
 pub mod shaders;
 
+pub mod textures;
+use textures::Textures;
+
 use winit::{
     event_loop::{EventLoop, ControlFlow},
     event::Event,
@@ -18,6 +21,7 @@ const MINE_COUNT: u16 = 8;
 #[derive(Debug)]
 pub struct Game {
     display: Display,
+    textures: Textures,
 
     field: Field,
 }
@@ -27,8 +31,12 @@ impl Game {
         let mut field = Field::new(FIELD_WIDTH, FIELD_HEIGHT);
         field.populate(MINE_COUNT, None, &mut rand::thread_rng());
 
+        let display = Display::new(&event_loop);
+        let textures = Textures::new(&display);
+
         Game {
-            display: Display::new(&event_loop),
+            display,
+            textures,
 
             field,
         }
@@ -64,23 +72,24 @@ impl Game {
 
     fn render(&mut self) {
         let field = &self.field;
+        let textures = &self.textures;
 
         self.display.render(move |renderer| {
+            renderer.clear((0.5, 0.5, 0.5));
+
             for x in 0 .. FIELD_WIDTH {
                 for y in 0 .. FIELD_HEIGHT {
                     let cell = field.get_cell(x, y);
-                    let color = if cell.has_mine {
-                        (1.0, 0.0, 0.0)
-                    } else {
-                        (0.2, 0.2, 0.2)
-                    };
+                    if cell.has_mine {
+                        let texture_view = textures.bomb.create_view(&Default::default());
 
-                    let origin_x = x as f32 / FIELD_WIDTH as f32 * 2.0 - 1.0;
-                    let origin_y = y as f32 / FIELD_HEIGHT as f32 * 2.0 - 1.0;
-                    let bounds_x = 2.0 / FIELD_WIDTH as f32;
-                    let bounds_y = 2.0 / FIELD_HEIGHT as f32;
+                        let origin_x = x as f32 / FIELD_WIDTH as f32 * 2.0 - 1.0;
+                        let origin_y = y as f32 / FIELD_HEIGHT as f32 * 2.0 - 1.0;
+                        let bounds_x = 2.0 / FIELD_WIDTH as f32;
+                        let bounds_y = 2.0 / FIELD_HEIGHT as f32;
 
-                    renderer.draw_rect((origin_x, origin_y), (bounds_x, bounds_y), color);
+                        renderer.draw_rect((origin_x, origin_y), (bounds_x, bounds_y), &texture_view);
+                    }
                 }
             }
         });

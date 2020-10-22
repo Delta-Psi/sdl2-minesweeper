@@ -1,11 +1,11 @@
 use crate::display::Renderer;
-use wgpu::{Device, BindGroup, RenderPipeline, Buffer};
+use wgpu::{Device, BindGroupLayout, RenderPipeline, Buffer, Sampler, TextureView};
 
 #[derive(Debug)]
 pub struct Rect {
     rect_buffer: Buffer,
-    color_buffer: Buffer,
-    bind_group: BindGroup,
+    sampler: Sampler,
+    bind_group_layout: BindGroupLayout,
     pipeline: RenderPipeline,
 }
 
@@ -16,12 +16,6 @@ use bytemuck::{Pod, Zeroable};
 struct RectUniform {
     origin: [f32; 2],
     bounds: [f32; 2],
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Zeroable, Pod)]
-struct ColorUniform {
-    color: [f32; 3],
 }
 
 impl Rect {
@@ -48,9 +42,18 @@ impl Rect {
                 wgpu::BindGroupLayoutEntry {
                     binding: 1,
                     visibility: wgpu::ShaderStage::FRAGMENT,
-                    ty: wgpu::BindingType::UniformBuffer {
-                        dynamic: false,
-                        min_binding_size: None,
+                    ty: wgpu::BindingType::SampledTexture {
+                        dimension: wgpu::TextureViewDimension::D2,
+                        component_type: wgpu::TextureComponentType::Float,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler {
+                        comparison: false,
                     },
                     count: None,
                 },
@@ -64,26 +67,14 @@ impl Rect {
             mapped_at_creation: false,
         });
 
-        let color_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: None,
-            size: std::mem::size_of::<ColorUniform>() as wgpu::BufferAddress,
-            usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer(rect_buffer.slice(..)),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Buffer(color_buffer.slice(..)),
-                },
-            ],
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Linear,
+            ..Default::default()
         });
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -107,7 +98,22 @@ impl Rect {
             }),
             rasterization_state: None,
             primitive_topology: wgpu::PrimitiveTopology::TriangleStrip,
-            color_states: &[crate::display::TEXTURE_FORMAT.into()],
+            color_states: &[
+                wgpu::ColorStateDescriptor {
+                    format: crate::display::TEXTURE_FORMAT,
+                    alpha_blend: wgpu::BlendDescriptor {
+                        src_factor: wgpu::BlendFactor::One,
+                        dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                        operation: wgpu::BlendOperation::Add,
+                    },
+                    color_blend: wgpu::BlendDescriptor {
+                        src_factor: wgpu::BlendFactor::One,
+                        dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                        operation: wgpu::BlendOperation::Add,
+                    },
+                    write_mask: wgpu::ColorWrite::ALL,
+                }
+            ],
             depth_stencil_state: None,
             vertex_state: wgpu::VertexStateDescriptor {
                 index_format: wgpu::IndexFormat::Uint16,
@@ -120,23 +126,42 @@ impl Rect {
 
         Self {
             rect_buffer,
-            color_buffer,
-            bind_group,
+            sampler,
+            bind_group_layout,
             pipeline,
         }
     }
 
-    pub fn draw_rect(&self, renderer: &Renderer, origin: (f32, f32), bounds: (f32, f32), color: (f32, f32, f32)) {
+    pub fn draw_rect(&self,
+        renderer: &Renderer,
+        origin: (f32, f32),
+        bounds: (f32, f32),
+        texture_view: &TextureView,
+    ) {
         let rect = RectUniform {
             origin: [origin.0, origin.1],
             bounds: [bounds.0, bounds.1],
         };
         renderer.queue.write_buffer(&self.rect_buffer, 0, bytemuck::bytes_of(&rect));
 
-        let color = ColorUniform {
-            color: [color.0, color.1, color.2],
-        };
-        renderer.queue.write_buffer(&self.color_buffer, 0, bytemuck::bytes_of(&color));
+        let bind_group = renderer.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &self.bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer(self.rect_buffer.slice(..)),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(texture_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&self.sampler),
+                },
+            ],
+        });
 
         let mut encoder = renderer.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: None,
@@ -156,7 +181,7 @@ impl Rect {
                 depth_stencil_attachment: None,
             });
 
-            rpass.set_bind_group(0, &self.bind_group, &[]);
+            rpass.set_bind_group(0, &bind_group, &[]);
             rpass.set_pipeline(&self.pipeline);
             rpass.draw(0..4, 0..1);
         }
