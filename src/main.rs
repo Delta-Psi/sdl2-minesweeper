@@ -15,22 +15,28 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn run() -> ! {
-        let event_loop = EventLoop::new();
-
-        let game = Game {
+    pub fn new(event_loop: &EventLoop<()>) -> Self {
+        Game {
             display: Display::new(&event_loop),
-        };
+        }
+    }
 
+    pub fn run(mut self, event_loop: EventLoop<()>) -> ! {
+        self.display.set_visible(true);
         event_loop.run(move |event, _, control_flow| {
-            game.event_handler(event, control_flow);
+            self.event_handler(event, control_flow);
         })
     }
 
-    fn event_handler(&self, event: Event<'_, ()>, control_flow: &mut ControlFlow) {
+    fn event_handler(&mut self, event: Event<'_, ()>, control_flow: &mut ControlFlow) {
         use winit::event::WindowEvent;
 
         match event {
+            Event::MainEventsCleared => {
+                self.update();
+                self.render();
+            }
+
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 ..
@@ -38,6 +44,15 @@ impl Game {
 
             _ => (),
         }
+    }
+
+    fn update(&self) {
+    }
+
+    fn render(&mut self) {
+        self.display.render(|renderer| {
+            renderer.render_rect((0.0, 0.0), (0.5, 0.5), (0.0, 1.0, 1.0));
+        });
     }
 }
 
@@ -61,5 +76,7 @@ fn main() {
         println!();
     }
 
-    Game::run()
+    let event_loop = EventLoop::new();
+    let game = Game::new(&event_loop);
+    game.run(event_loop);
 }
