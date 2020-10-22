@@ -80,16 +80,19 @@ impl Game {
             for x in 0 .. FIELD_WIDTH {
                 for y in 0 .. FIELD_HEIGHT {
                     let cell = field.get_cell(x, y);
-                    if cell.has_mine {
-                        let texture_view = textures.bomb.create_view(&Default::default());
 
-                        let origin_x = x as f32 / FIELD_WIDTH as f32 * 2.0 - 1.0;
-                        let origin_y = y as f32 / FIELD_HEIGHT as f32 * 2.0 - 1.0;
-                        let bounds_x = 2.0 / FIELD_WIDTH as f32;
-                        let bounds_y = 2.0 / FIELD_HEIGHT as f32;
+                    let texture_view = if cell.has_mine {
+                        &textures.mine
+                    } else {
+                        &textures.numbers[cell.neighboring_mines as usize]
+                    }.create_view(&Default::default());
 
-                        renderer.draw_rect((origin_x, origin_y), (bounds_x, bounds_y), &texture_view);
-                    }
+                    let origin_x = x as f32 / FIELD_WIDTH as f32 * 2.0 - 1.0;
+                    let origin_y = y as f32 / FIELD_HEIGHT as f32 * 2.0 - 1.0;
+                    let bounds_x = 2.0 / FIELD_WIDTH as f32;
+                    let bounds_y = 2.0 / FIELD_HEIGHT as f32;
+
+                    renderer.draw_rect((origin_x, origin_y), (bounds_x, bounds_y), &texture_view);
                 }
             }
         });
