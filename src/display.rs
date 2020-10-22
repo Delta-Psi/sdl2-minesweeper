@@ -168,7 +168,7 @@ impl RectRenderer {
                     visibility: wgpu::ShaderStage::VERTEX,
                     ty: wgpu::BindingType::UniformBuffer {
                         dynamic: false,
-                        min_binding_size: wgpu::BufferSize::new(std::mem::size_of::<Rect>() as u64),
+                        min_binding_size: None,
                     },
                     count: None,
                 },
@@ -177,7 +177,7 @@ impl RectRenderer {
                     visibility: wgpu::ShaderStage::FRAGMENT,
                     ty: wgpu::BindingType::UniformBuffer {
                         dynamic: false,
-                        min_binding_size: wgpu::BufferSize::new(std::mem::size_of::<Color>() as u64),
+                        min_binding_size: None,
                     },
                     count: None,
                 },
@@ -216,7 +216,7 @@ impl RectRenderer {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &[
-                //&bind_group_layout,
+                &bind_group_layout,
             ],
             push_constant_ranges: &[],
         });
@@ -283,7 +283,7 @@ impl RectRenderer {
                 depth_stencil_attachment: None,
             });
 
-            //rpass.set_bind_group(0, &self.bind_group, &[]);
+            rpass.set_bind_group(0, &self.bind_group, &[]);
             rpass.set_pipeline(&self.pipeline);
             rpass.draw(0..4, 0..1);
         }

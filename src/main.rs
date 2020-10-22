@@ -51,7 +51,7 @@ impl Game {
 
     fn render(&mut self) {
         self.display.render(|renderer| {
-            renderer.render_rect((0.0, 0.0), (0.5, 0.5), (0.0, 1.0, 1.0));
+            renderer.render_rect((0.0, 0.0), (0.5, 0.5), (1.0, 0.5, 0.0));
         });
     }
 }
