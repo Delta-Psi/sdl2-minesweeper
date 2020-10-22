@@ -5,9 +5,8 @@ use winit::{
 use wgpu::{Surface, Device, Queue, SwapChain, SwapChainDescriptor, Texture, TextureView};
 
 use crate::shaders;
+use crate::{WINDOW_WIDTH, WINDOW_HEIGHT};
 
-const WINDOW_WIDTH: u32 = 640;
-const WINDOW_HEIGHT: u32 = 480;
 pub(crate) const TEXTURE_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
 
 #[derive(Debug)]
@@ -25,7 +24,7 @@ pub struct Display {
 }
 
 impl Display {
-    pub fn new(event_loop: &EventLoop<()>) -> Self {
+    pub fn new<T>(event_loop: &EventLoop<T>) -> Self {
         let window = WindowBuilder::new()
             .with_title("wgpu minesweeper")
             .with_inner_size(winit::dpi::PhysicalSize::new(
