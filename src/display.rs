@@ -1,11 +1,11 @@
+use wgpu::{Device, Queue, Surface, SwapChain, SwapChainDescriptor, Texture, TextureView};
 use winit::{
     event_loop::EventLoop,
     window::{Window, WindowBuilder},
 };
-use wgpu::{Surface, Device, Queue, SwapChain, SwapChainDescriptor, Texture, TextureView};
 
 use crate::shaders;
-use crate::{WINDOW_WIDTH, WINDOW_HEIGHT};
+use crate::{WINDOW_HEIGHT, WINDOW_WIDTH};
 
 pub(crate) const TEXTURE_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
 
@@ -27,15 +27,13 @@ impl Display {
     pub fn new<T>(event_loop: &EventLoop<T>) -> Self {
         let window = WindowBuilder::new()
             .with_title("wgpu minesweeper")
-            .with_inner_size(winit::dpi::PhysicalSize::new(
-                    WINDOW_WIDTH,
-                    WINDOW_HEIGHT))
+            .with_inner_size(winit::dpi::PhysicalSize::new(WINDOW_WIDTH, WINDOW_HEIGHT))
             .with_resizable(false)
             .with_visible(false)
-            .build(&event_loop).unwrap();
+            .build(&event_loop)
+            .unwrap();
 
-        let (surface, device, queue) =
-            futures::executor::block_on(Display::init_wgpu(&window));
+        let (surface, device, queue) = futures::executor::block_on(Display::init_wgpu(&window));
 
         let swap_chain_descriptor = wgpu::SwapChainDescriptor {
             usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
@@ -62,20 +60,22 @@ impl Display {
         }
     }
 
-    async fn init_wgpu(window: &Window) -> (Surface, Device, Queue)
-    {
+    async fn init_wgpu(window: &Window) -> (Surface, Device, Queue) {
         let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
-        let surface = unsafe {
-            instance.create_surface(window)
-        };
+        let surface = unsafe { instance.create_surface(window) };
 
-        let adapter = instance.request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::Default,
-            compatible_surface: Some(&surface),
-        }).await.unwrap();
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::Default,
+                compatible_surface: Some(&surface),
+            })
+            .await
+            .unwrap();
 
-        let (device, queue) = adapter.request_device(&Default::default(), None)
-            .await.unwrap();
+        let (device, queue) = adapter
+            .request_device(&Default::default(), None)
+            .await
+            .unwrap();
 
         (surface, device, queue)
     }
@@ -88,10 +88,9 @@ impl Display {
         let frame = match self.swap_chain.get_current_frame() {
             Ok(frame) => frame,
             Err(_) => {
-                self.swap_chain = self.device.create_swap_chain(
-                    &self.surface,
-                    &self.swap_chain_descriptor,
-                );
+                self.swap_chain = self
+                    .device
+                    .create_swap_chain(&self.surface, &self.swap_chain_descriptor);
                 self.swap_chain.get_current_frame().unwrap()
             }
         };
@@ -164,21 +163,19 @@ impl<'a> Renderer<'a> {
         let mut encoder = self.device.create_command_encoder(&Default::default());
         {
             let _rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                color_attachments: &[
-                    wgpu::RenderPassColorAttachmentDescriptor {
-                        attachment: &self.frame.output.view,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color {
-                                r: color.0 as f64,
-                                g: color.1 as f64,
-                                b: color.2 as f64,
-                                a: 1.0,
-                            }),
-                            store: true,
-                        },
+                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
+                    attachment: &self.frame.output.view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: color.0 as f64,
+                            g: color.1 as f64,
+                            b: color.2 as f64,
+                            a: 1.0,
+                        }),
+                        store: true,
                     },
-                ],
+                }],
                 depth_stencil_attachment: None,
             });
         }
@@ -187,7 +184,7 @@ impl<'a> Renderer<'a> {
     }
 
     pub fn draw_rect(&self, origin: (f32, f32), bounds: (f32, f32), texture_view: &TextureView) {
-        self.rect_pipeline.draw_rect(&self, origin, bounds, texture_view);
+        self.rect_pipeline
+            .draw_rect(&self, origin, bounds, texture_view);
     }
 }
-

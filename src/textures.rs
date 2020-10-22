@@ -1,5 +1,5 @@
-use wgpu::Texture;
 use crate::display::Display;
+use wgpu::Texture;
 
 #[derive(Debug)]
 pub struct Textures {

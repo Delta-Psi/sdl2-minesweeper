@@ -35,13 +35,21 @@ impl Field {
             height,
             mine_count: 0,
         };
-        field.cells.resize_with(width as usize * height as usize, Default::default);
+        field
+            .cells
+            .resize_with(width as usize * height as usize, Default::default);
         field
     }
 
-    pub fn populate<R: Rng + ?Sized>(&mut self, mine_count: u16, safe_cell: Option<(u8, u8)>, rng: &mut R) {
+    pub fn populate<R: Rng + ?Sized>(
+        &mut self,
+        mine_count: u16,
+        safe_cell: Option<(u8, u8)>,
+        rng: &mut R,
+    ) {
         let cell_count = self.width as u16 * self.height as u16
-            - self.mine_count - if safe_cell.is_some() { 1 } else { 0 };
+            - self.mine_count
+            - if safe_cell.is_some() { 1 } else { 0 };
         assert!(mine_count <= cell_count);
 
         use rand::distributions::{Distribution, Uniform};
@@ -59,8 +67,8 @@ impl Field {
             }
 
             cell.has_mine = true;
-            for x in x.saturating_sub(1) ..= (x+1).min(self.width-1) {
-                for y in y.saturating_sub(1) ..= (y+1).min(self.height-1) {
+            for x in x.saturating_sub(1)..=(x + 1).min(self.width - 1) {
+                for y in y.saturating_sub(1)..=(y + 1).min(self.height - 1) {
                     self.get_cell_mut(x, y).neighboring_mines += 1;
                 }
             }
@@ -94,7 +102,7 @@ impl Field {
         assert!(x < self.width);
         assert!(y < self.height);
 
-        x as usize + y as usize*self.width as usize
+        x as usize + y as usize * self.width as usize
     }
 
     /// Returns true if the cell is a mine.
@@ -108,4 +116,3 @@ impl Field {
         self.get_cell_mut(x, y).marked = true;
     }
 }
-

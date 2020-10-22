@@ -10,8 +10,8 @@ pub mod textures;
 use textures::Textures;
 
 use winit::{
+    event::{ElementState, MouseButton},
     event_loop::ControlFlow,
-    event::{MouseButton, ElementState},
 };
 
 const WINDOW_WIDTH: u32 = 640;
@@ -27,7 +27,7 @@ pub enum CustomEvent {
         position: (u32, u32),
         state: ElementState,
         button: MouseButton,
-    }
+    },
 }
 
 pub type EventLoop = winit::event_loop::EventLoop<CustomEvent>;
@@ -90,11 +90,11 @@ impl Game {
             _ => (),
         }
 
-        self.mouse_input_handler.on_event(&event, &self.event_loop_proxy);
+        self.mouse_input_handler
+            .on_event(&event, &self.event_loop_proxy);
     }
 
-    fn update(&self) {
-    }
+    fn update(&self) {}
 
     fn render(&mut self) {
         let field = &self.field;
@@ -103,15 +103,16 @@ impl Game {
         self.display.render(move |renderer| {
             renderer.clear((0.5, 0.5, 0.5));
 
-            for x in 0 .. FIELD_WIDTH {
-                for y in 0 .. FIELD_HEIGHT {
+            for x in 0..FIELD_WIDTH {
+                for y in 0..FIELD_HEIGHT {
                     let cell = field.get_cell(x, y);
 
                     let texture_view = if !cell.revealed {
                         &textures.unrevealed
                     } else {
                         &textures.numbers[cell.neighboring_mines as usize]
-                    }.create_view(&Default::default());
+                    }
+                    .create_view(&Default::default());
 
                     let origin_x = x as f32 / FIELD_WIDTH as f32 * 2.0 - 1.0;
                     let origin_y = y as f32 / FIELD_HEIGHT as f32 * 2.0 - 1.0;
@@ -140,24 +141,28 @@ impl MouseInputHandler {
     }
 
     pub fn on_event(&mut self, event: &Event<'_>, event_loop_proxy: &EventLoopProxy) {
-        if let winit::event::Event::WindowEvent{ event, .. } = event {
+        if let winit::event::Event::WindowEvent { event, .. } = event {
             use winit::event::WindowEvent::*;
 
             match event {
-                CursorMoved{ position, .. } => {
+                CursorMoved { position, .. } => {
                     self.last_mouse_position = (position.x as u32, position.y as u32);
                 }
 
-                CursorEntered{..} => self.cursor_inside = true,
-                CursorLeft{..} => self.cursor_inside = false,
+                CursorEntered { .. } => self.cursor_inside = true,
+                CursorLeft { .. } => self.cursor_inside = false,
 
-                MouseInput{button, state, ..} => if self.cursor_inside {
-                    event_loop_proxy.send_event(CustomEvent::MouseClick {
-                        position: self.last_mouse_position,
-                        state: *state,
-                        button: *button,
-                    }).unwrap();
-                },
+                MouseInput { button, state, .. } => {
+                    if self.cursor_inside {
+                        event_loop_proxy
+                            .send_event(CustomEvent::MouseClick {
+                                position: self.last_mouse_position,
+                                state: *state,
+                                button: *button,
+                            })
+                            .unwrap();
+                    }
+                }
 
                 _ => (),
             }

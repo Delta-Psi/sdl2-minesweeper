@@ -1,5 +1,5 @@
 use crate::display::Renderer;
-use wgpu::{Device, BindGroupLayout, RenderPipeline, Buffer, Sampler, TextureView};
+use wgpu::{BindGroupLayout, Buffer, Device, RenderPipeline, Sampler, TextureView};
 
 #[derive(Debug)]
 pub struct Rect {
@@ -20,12 +20,10 @@ struct RectUniform {
 
 impl Rect {
     pub fn new(device: &Device) -> Self {
-        let vertex_shader = device.create_shader_module(
-            wgpu::include_spirv!("shaders/rect.vert.spv")
-        );
-        let fragment_shader = device.create_shader_module(
-            wgpu::include_spirv!("shaders/rect.frag.spv")
-        );
+        let vertex_shader =
+            device.create_shader_module(wgpu::include_spirv!("shaders/rect.vert.spv"));
+        let fragment_shader =
+            device.create_shader_module(wgpu::include_spirv!("shaders/rect.frag.spv"));
 
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: None,
@@ -52,9 +50,7 @@ impl Rect {
                 wgpu::BindGroupLayoutEntry {
                     binding: 2,
                     visibility: wgpu::ShaderStage::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler {
-                        comparison: false,
-                    },
+                    ty: wgpu::BindingType::Sampler { comparison: false },
                     count: None,
                 },
             ],
@@ -79,9 +75,7 @@ impl Rect {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[
-                &bind_group_layout,
-            ],
+            bind_group_layouts: &[&bind_group_layout],
             push_constant_ranges: &[],
         });
 
@@ -98,22 +92,20 @@ impl Rect {
             }),
             rasterization_state: None,
             primitive_topology: wgpu::PrimitiveTopology::TriangleStrip,
-            color_states: &[
-                wgpu::ColorStateDescriptor {
-                    format: crate::display::TEXTURE_FORMAT,
-                    alpha_blend: wgpu::BlendDescriptor {
-                        src_factor: wgpu::BlendFactor::One,
-                        dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-                        operation: wgpu::BlendOperation::Add,
-                    },
-                    color_blend: wgpu::BlendDescriptor {
-                        src_factor: wgpu::BlendFactor::One,
-                        dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-                        operation: wgpu::BlendOperation::Add,
-                    },
-                    write_mask: wgpu::ColorWrite::ALL,
-                }
-            ],
+            color_states: &[wgpu::ColorStateDescriptor {
+                format: crate::display::TEXTURE_FORMAT,
+                alpha_blend: wgpu::BlendDescriptor {
+                    src_factor: wgpu::BlendFactor::One,
+                    dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                    operation: wgpu::BlendOperation::Add,
+                },
+                color_blend: wgpu::BlendDescriptor {
+                    src_factor: wgpu::BlendFactor::One,
+                    dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+                    operation: wgpu::BlendOperation::Add,
+                },
+                write_mask: wgpu::ColorWrite::ALL,
+            }],
             depth_stencil_state: None,
             vertex_state: wgpu::VertexStateDescriptor {
                 index_format: wgpu::IndexFormat::Uint16,
@@ -132,7 +124,8 @@ impl Rect {
         }
     }
 
-    pub fn draw_rect(&self,
+    pub fn draw_rect(
+        &self,
         renderer: &Renderer,
         origin: (f32, f32),
         bounds: (f32, f32),
@@ -142,42 +135,44 @@ impl Rect {
             origin: [origin.0, origin.1],
             bounds: [bounds.0, bounds.1],
         };
-        renderer.queue.write_buffer(&self.rect_buffer, 0, bytemuck::bytes_of(&rect));
+        renderer
+            .queue
+            .write_buffer(&self.rect_buffer, 0, bytemuck::bytes_of(&rect));
 
-        let bind_group = renderer.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer(self.rect_buffer.slice(..)),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(texture_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(&self.sampler),
-                },
-            ],
-        });
-
-        let mut encoder = renderer.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: None,
-        });
-        {
-            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                color_attachments: &[
-                    wgpu::RenderPassColorAttachmentDescriptor {
-                        attachment: &renderer.frame.output.view,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Load,
-                            store: true,
-                        },
+        let bind_group = renderer
+            .device
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: None,
+                layout: &self.bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::Buffer(self.rect_buffer.slice(..)),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::TextureView(texture_view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: wgpu::BindingResource::Sampler(&self.sampler),
                     },
                 ],
+            });
+
+        let mut encoder = renderer
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+        {
+            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
+                    attachment: &renderer.frame.output.view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: true,
+                    },
+                }],
                 depth_stencil_attachment: None,
             });
 
