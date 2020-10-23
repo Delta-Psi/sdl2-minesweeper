@@ -9,8 +9,10 @@ pub mod shaders;
 pub mod textures;
 use textures::Textures;
 
+pub mod interface;
+use interface::{Interface, InterfaceEvent};
+
 use winit::{
-    event::{ElementState, MouseButton},
     event_loop::ControlFlow,
 };
 
@@ -23,11 +25,7 @@ const MINE_COUNT: u16 = 8;
 
 #[derive(Debug)]
 pub enum CustomEvent {
-    MouseClick {
-        position: (u32, u32),
-        state: ElementState,
-        button: MouseButton,
-    },
+    InterfaceEvent(InterfaceEvent),
 }
 
 pub type EventLoop = winit::event_loop::EventLoop<CustomEvent>;
@@ -37,12 +35,11 @@ pub type EventLoopProxy = winit::event_loop::EventLoopProxy<CustomEvent>;
 #[derive(Debug)]
 pub struct Game {
     display: Display,
+    interface: Interface,
     textures: Textures,
 
     field: Field,
-
-    event_loop_proxy: EventLoopProxy,
-    mouse_input_handler: MouseInputHandler,
+    field_populated: bool,
 }
 
 impl Game {
@@ -55,12 +52,11 @@ impl Game {
 
         Game {
             display,
+            interface: Interface::new(event_loop.create_proxy()),
             textures,
 
             field,
-
-            event_loop_proxy: event_loop.create_proxy(),
-            mouse_input_handler: MouseInputHandler::new(),
+            field_populated: false,
         }
     }
 
@@ -85,13 +81,30 @@ impl Game {
                 ..
             } => *control_flow = ControlFlow::Exit,
 
-            Event::UserEvent(ref event) => println!("{:?}", event),
+            Event::UserEvent(ref event) => match event {
+                CustomEvent::InterfaceEvent(event) => match event {
+                    InterfaceEvent::RevealCell(x, y) => {
+                        self.reveal(*x, *y);
+                    }
+                    InterfaceEvent::FlagCell(x, y) => {
+                        self.field.flag(*x, *y);
+                    }
+                }
+            }
 
             _ => (),
         }
 
-        self.mouse_input_handler
-            .on_event(&event, &self.event_loop_proxy);
+        self.interface.on_event(&event, &self.field);
+    }
+
+    pub fn reveal(&mut self, x: u8, y: u8) {
+        if !self.field_populated {
+            self.field.populate(MINE_COUNT, Some((x, y)), &mut rand::thread_rng());
+            self.field_populated = true;
+        }
+
+        self.field.reveal(x, y);
     }
 
     fn update(&self) {}
@@ -107,15 +120,21 @@ impl Game {
                 for y in 0..FIELD_HEIGHT {
                     let cell = field.get_cell(x, y);
 
-                    let texture_view = if !cell.revealed {
-                        &textures.unrevealed
+                    let texture_view = if cell.revealed {
+                        if cell.has_mine {
+                            &textures.mine
+                        } else {
+                            &textures.numbers[cell.neighboring_mines as usize]
+                        }
+                    } else if cell.flagged {
+                        &textures.flag
                     } else {
-                        &textures.numbers[cell.neighboring_mines as usize]
+                        &textures.unrevealed
                     }
                     .create_view(&Default::default());
 
                     let origin_x = x as f32 / FIELD_WIDTH as f32 * 2.0 - 1.0;
-                    let origin_y = y as f32 / FIELD_HEIGHT as f32 * 2.0 - 1.0;
+                    let origin_y = 1.0 - (y+1) as f32 / FIELD_HEIGHT as f32 * 2.0;
                     let bounds_x = 2.0 / FIELD_WIDTH as f32;
                     let bounds_y = 2.0 / FIELD_HEIGHT as f32;
 
@@ -123,50 +142,6 @@ impl Game {
                 }
             }
         });
-    }
-}
-
-#[derive(Debug)]
-struct MouseInputHandler {
-    last_mouse_position: (u32, u32),
-    cursor_inside: bool,
-}
-
-impl MouseInputHandler {
-    pub fn new() -> Self {
-        Self {
-            last_mouse_position: (0, 0),
-            cursor_inside: false,
-        }
-    }
-
-    pub fn on_event(&mut self, event: &Event<'_>, event_loop_proxy: &EventLoopProxy) {
-        if let winit::event::Event::WindowEvent { event, .. } = event {
-            use winit::event::WindowEvent::*;
-
-            match event {
-                CursorMoved { position, .. } => {
-                    self.last_mouse_position = (position.x as u32, position.y as u32);
-                }
-
-                CursorEntered { .. } => self.cursor_inside = true,
-                CursorLeft { .. } => self.cursor_inside = false,
-
-                MouseInput { button, state, .. } => {
-                    if self.cursor_inside {
-                        event_loop_proxy
-                            .send_event(CustomEvent::MouseClick {
-                                position: self.last_mouse_position,
-                                state: *state,
-                                button: *button,
-                            })
-                            .unwrap();
-                    }
-                }
-
-                _ => (),
-            }
-        }
     }
 }
 

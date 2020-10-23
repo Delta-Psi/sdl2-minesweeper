@@ -4,7 +4,7 @@ use rand::Rng;
 pub struct Cell {
     pub has_mine: bool,
     pub revealed: bool,
-    pub marked: bool,
+    pub flagged: bool,
     pub neighboring_mines: u8,
 }
 
@@ -13,7 +13,7 @@ impl Default for Cell {
         Self {
             has_mine: false,
             revealed: false,
-            marked: false,
+            flagged: false,
             neighboring_mines: 0,
         }
     }
@@ -107,12 +107,13 @@ impl Field {
 
     /// Returns true if the cell is a mine.
     pub fn reveal(&mut self, x: u8, y: u8) -> bool {
+        // TODO: recurse if there are no neighboring mines
         let cell = self.get_cell_mut(x, y);
         cell.revealed = true;
         cell.has_mine
     }
 
-    pub fn mark(&mut self, x: u8, y: u8) {
-        self.get_cell_mut(x, y).marked = true;
+    pub fn flag(&mut self, x: u8, y: u8) {
+        self.get_cell_mut(x, y).flagged = true;
     }
 }
