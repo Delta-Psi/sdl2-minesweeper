@@ -21,7 +21,7 @@ const WINDOW_HEIGHT: u32 = 480;
 
 const FIELD_WIDTH: u8 = 8;
 const FIELD_HEIGHT: u8 = 8;
-const MINE_COUNT: u16 = 8;
+const MINE_COUNT: u16 = 6;
 
 #[derive(Debug)]
 pub enum CustomEvent {
@@ -86,8 +86,8 @@ impl Game {
                     InterfaceEvent::RevealCell(x, y) => {
                         self.reveal(*x, *y);
                     }
-                    InterfaceEvent::FlagCell(x, y) => {
-                        self.field.flag(*x, *y);
+                    InterfaceEvent::ToggleFlagCell(x, y) => {
+                        self.field.toggle_flag(*x, *y);
                     }
                 }
             }

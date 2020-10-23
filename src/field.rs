@@ -107,13 +107,28 @@ impl Field {
 
     /// Returns true if the cell is a mine.
     pub fn reveal(&mut self, x: u8, y: u8) -> bool {
-        // TODO: recurse if there are no neighboring mines
         let cell = self.get_cell_mut(x, y);
+        if cell.revealed {
+            return cell.has_mine;
+        }
         cell.revealed = true;
-        cell.has_mine
+
+        if cell.has_mine {
+            true
+        } else if cell.neighboring_mines == 0 {
+            for x in x.saturating_sub(1) ..= (x+1).min(self.width-1) {
+                for y in y.saturating_sub(1) ..= (y+1).min(self.height-1) {
+                    self.reveal(x, y);
+                }
+            }
+
+            false
+        } else {
+            false
+        }
     }
 
-    pub fn flag(&mut self, x: u8, y: u8) {
-        self.get_cell_mut(x, y).flagged = true;
+    pub fn toggle_flag(&mut self, x: u8, y: u8) {
+        self.get_cell_mut(x, y).flagged ^= true;
     }
 }

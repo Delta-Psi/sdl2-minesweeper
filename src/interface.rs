@@ -5,7 +5,7 @@ use super::{WINDOW_WIDTH, WINDOW_HEIGHT};
 #[derive(Debug)]
 pub enum InterfaceEvent {
     RevealCell(u8, u8),
-    FlagCell(u8, u8),
+    ToggleFlagCell(u8, u8),
 }
 
 #[derive(Debug)]
@@ -50,7 +50,7 @@ impl Interface {
                             MouseButton::Right =>
                                 self.event_loop_proxy.send_event(
                                     CustomEvent::InterfaceEvent(
-                                        InterfaceEvent::FlagCell(x, y))).unwrap(),
+                                        InterfaceEvent::ToggleFlagCell(x, y))).unwrap(),
 
                             _ => (),
                         }
