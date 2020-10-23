@@ -16,7 +16,7 @@ use winit::{
     event_loop::ControlFlow,
 };
 
-const WINDOW_WIDTH: u32 = 640;
+const WINDOW_WIDTH: u32 = 480;
 const WINDOW_HEIGHT: u32 = 480;
 
 const FIELD_WIDTH: u8 = 8;
