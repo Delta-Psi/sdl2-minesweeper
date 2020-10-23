@@ -21,7 +21,7 @@ const WINDOW_HEIGHT: u32 = 480;
 
 const FIELD_WIDTH: u8 = 8;
 const FIELD_HEIGHT: u8 = 8;
-const MINE_COUNT: u16 = 6;
+const MINE_COUNT: u16 = 8;
 
 #[derive(Debug)]
 pub enum CustomEvent {
@@ -44,8 +44,7 @@ pub struct Game {
 
 impl Game {
     pub fn new(event_loop: &EventLoop) -> Self {
-        let mut field = Field::new(FIELD_WIDTH, FIELD_HEIGHT);
-        field.populate(MINE_COUNT, None, &mut rand::thread_rng());
+        let field = Field::new(FIELD_WIDTH, FIELD_HEIGHT);
 
         let display = Display::new(event_loop);
         let textures = Textures::new(&display);
