@@ -1,16 +1,13 @@
 use wgpu::{Device, Queue, Surface, SwapChain, SwapChainDescriptor, Texture, TextureView};
-use winit::{
-    event_loop::EventLoop,
-    window::{Window, WindowBuilder},
-};
+use sdl2::{Sdl, VideoSubsystem, video::Window};
 
 use crate::shaders;
 use crate::{WINDOW_HEIGHT, WINDOW_WIDTH};
 
 pub(crate) const TEXTURE_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8UnormSrgb;
 
-#[derive(Debug)]
 pub struct Display {
+    _video: VideoSubsystem,
     window: Window,
 
     surface: Surface,
@@ -24,14 +21,12 @@ pub struct Display {
 }
 
 impl Display {
-    pub fn new<T>(event_loop: &EventLoop<T>) -> Self {
-        let window = WindowBuilder::new()
-            .with_title("wgpu minesweeper")
-            .with_inner_size(winit::dpi::PhysicalSize::new(WINDOW_WIDTH, WINDOW_HEIGHT))
-            .with_resizable(false)
-            .with_visible(false)
-            .build(&event_loop)
-            .unwrap();
+    pub fn new(sdl: &Sdl) -> Self {
+        let video = sdl.video().unwrap();
+        let window = video.window("wgpu minesweeper", WINDOW_WIDTH, WINDOW_HEIGHT)
+            .vulkan()
+            .hidden()
+            .build().unwrap();
 
         let (surface, device, queue) = futures::executor::block_on(Display::init_wgpu(&window));
 
@@ -47,6 +42,7 @@ impl Display {
         let rect_pipeline = shaders::Rect::new(&device);
 
         Self {
+            _video: video,
             window,
 
             surface,
@@ -80,8 +76,12 @@ impl Display {
         (surface, device, queue)
     }
 
-    pub fn set_visible(&self, visible: bool) {
-        self.window.set_visible(visible);
+    pub fn set_visible(&mut self, visible: bool) {
+        if visible == true {
+            self.window.show()
+        } else {
+            self.window.hide()
+        }
     }
 
     fn renderer(&mut self) -> Renderer {

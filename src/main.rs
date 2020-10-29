@@ -9,8 +9,9 @@ pub mod shaders;
 pub mod textures;
 use textures::Textures;
 
-use winit::{
-    event_loop::ControlFlow,
+use sdl2::{
+    Sdl,
+    event::Event,
 };
 
 const WINDOW_WIDTH: u32 = 480;
@@ -20,88 +21,91 @@ const FIELD_WIDTH: u8 = 8;
 const FIELD_HEIGHT: u8 = 8;
 const MINE_COUNT: u16 = 8;
 
-pub type EventLoop = winit::event_loop::EventLoop<()>;
-pub type Event<'a> = winit::event::Event<'a, ()>;
-
-#[derive(Debug)]
 pub struct Game {
+    sdl: Sdl,
     display: Display,
     textures: Textures,
 
+    running: bool,
+
     field: Field,
     field_populated: bool,
-
-    cursor_position: (u32, u32),
-    cursor_pressed: bool,
+    pressed_cell: Option<(u8, u8)>,
 }
 
 impl Game {
-    pub fn new(event_loop: &EventLoop) -> Self {
+    pub fn new() -> Self {
         let field = Field::new(FIELD_WIDTH, FIELD_HEIGHT);
 
-        let display = Display::new(event_loop);
+        let sdl = sdl2::init().unwrap();
+
+        let display = Display::new(&sdl);
         let textures = Textures::new(&display);
 
         Game {
+            sdl,
             display,
             textures,
 
+            running: false,
+
             field,
             field_populated: false,
-
-            cursor_position: (0, 0),
-            cursor_pressed: false,
+            pressed_cell: None,
         }
     }
 
-    pub fn run(mut self, event_loop: EventLoop) -> ! {
+    pub fn run(mut self) {
         self.display.set_visible(true);
-        event_loop.run(move |event, _, control_flow| {
-            self.event_handler(event, control_flow);
-        })
-    }
+        self.running = true;
 
-    fn event_handler(&mut self, event: Event, control_flow: &mut ControlFlow) {
-        use winit::event::WindowEvent::*;
-
-        match event {
-            Event::MainEventsCleared => {
-                self.update();
-                self.render();
+        let mut event_pump = self.sdl.event_pump().unwrap();
+        while self.running {
+            for event in event_pump.poll_iter() {
+                self.event_handler(event);
             }
 
-            Event::WindowEvent { event, .. } => match event {
-                CloseRequested => *control_flow = ControlFlow::Exit,
+            self.update();
+            //self.render();
+        }
+    }
 
-                CursorMoved { position, .. } => {
-                    self.cursor_position = (position.x as u32, position.y as u32);
+    fn map_window_coords(&self, x: i32, y: i32) -> (u8, u8) {
+        (
+            (x as u32 * self.field.width() as u32 / WINDOW_WIDTH) as u8,
+            (y as u32 * self.field.height() as u32 / WINDOW_HEIGHT) as u8,
+        )
+    }
+
+    fn event_handler(&mut self, event: Event) {
+        use sdl2::mouse::MouseButton;
+
+        match event {
+            Event::Quit { .. } => {
+                self.running = false;
+            }
+
+            Event::MouseMotion { mousestate, x, y, .. } => {
+                if mousestate.left() {
+                    let (x, y) = self.map_window_coords(x, y);
+                    self.pressed_cell = Some((x, y));
                 }
-                MouseInput { state, button, .. } => {
-                    use winit::event::{ElementState, MouseButton};
-                    let (x, y) = (
-                        (self.cursor_position.0 * self.field.width() as u32 / WINDOW_WIDTH) as u8,
-                        (self.cursor_position.1 * self.field.height() as u32 / WINDOW_HEIGHT) as u8,
-                    );
+            }
 
-                    match state {
-                        ElementState::Pressed => match button {
-                            MouseButton::Left => self.cursor_pressed = true,
-                            MouseButton::Right => self.toggle_flag(x, y),
-                            _ => (),
-                        }
-
-                        ElementState::Released => {
-                            if button == MouseButton::Left {
-                                self.cursor_pressed = false;
-
-                                self.reveal(x, y);
-                            }
-                        }
-                    }
+            Event::MouseButtonDown { mouse_btn, x, y, .. } => {
+                if mouse_btn == MouseButton::Right {
+                    let (x, y) = self.map_window_coords(x, y);
+                    self.toggle_flag(x, y)
                 }
+            }
 
-                _ => (),
-            },
+            Event::MouseButtonUp { mouse_btn, x, y, .. } => {
+                if mouse_btn == MouseButton::Left {
+                    let (x, y) = self.map_window_coords(x, y);
+                    self.reveal(x, y);
+                    self.pressed_cell = None;
+                }
+            }
 
             _ => (),
         }
@@ -129,8 +133,7 @@ impl Game {
     fn render(&mut self) {
         let field = &self.field;
         let textures = &self.textures;
-        let cursor_position = self.cursor_position;
-        let cursor_pressed = self.cursor_pressed;
+        let pressed_cell = &self.pressed_cell;
 
         self.display.render(move |renderer| {
             renderer.clear((0.5, 0.5, 0.5));
@@ -138,10 +141,6 @@ impl Game {
             for x in 0..FIELD_WIDTH {
                 for y in 0..FIELD_HEIGHT {
                     let cell = field.get_cell(x, y);
-                    let (pressed_x, pressed_y) = (
-                        (cursor_position.0 * field.width() as u32 / WINDOW_WIDTH) as u8,
-                        (cursor_position.1 * field.height() as u32 / WINDOW_HEIGHT) as u8,
-                    );
 
                     let texture_view = if cell.revealed {
                         if cell.has_mine {
@@ -151,7 +150,9 @@ impl Game {
                         }
                     } else if cell.flagged {
                         &textures.flag
-                    } else if cursor_pressed && x == pressed_x && y == pressed_y {
+                    } else if pressed_cell.map(|(pressed_x, pressed_y)| x == pressed_x && y == pressed_y)
+                        .unwrap_or(false)
+                    {
                         &textures.pressed
                     } else {
                         &textures.unrevealed
@@ -171,7 +172,6 @@ impl Game {
 }
 
 fn main() {
-    let event_loop = EventLoop::with_user_event();
-    let game = Game::new(&event_loop);
-    game.run(event_loop);
+    let game = Game::new();
+    game.run();
 }
