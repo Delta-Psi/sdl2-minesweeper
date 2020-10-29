@@ -66,7 +66,7 @@ impl Game {
             }
 
             self.update();
-            //self.render();
+            self.render();
         }
     }
 
