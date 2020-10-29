@@ -60,6 +60,11 @@ impl Field {
         while remaining > 0 {
             let x = x_distr.sample(rng);
             let y = y_distr.sample(rng);
+            if let Some((safe_x, safe_y)) = safe_cell {
+                if x == safe_x && y == safe_y {
+                    continue;
+                }
+            }
 
             let cell = self.get_cell_mut(x, y);
             if cell.has_mine {

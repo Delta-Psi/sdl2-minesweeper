@@ -9,9 +9,6 @@ pub mod shaders;
 pub mod textures;
 use textures::Textures;
 
-pub mod interface;
-use interface::{Interface, InterfaceEvent};
-
 use winit::{
     event_loop::ControlFlow,
 };
@@ -23,23 +20,18 @@ const FIELD_WIDTH: u8 = 8;
 const FIELD_HEIGHT: u8 = 8;
 const MINE_COUNT: u16 = 8;
 
-#[derive(Debug)]
-pub enum CustomEvent {
-    InterfaceEvent(InterfaceEvent),
-}
-
-pub type EventLoop = winit::event_loop::EventLoop<CustomEvent>;
-pub type Event<'a> = winit::event::Event<'a, CustomEvent>;
-pub type EventLoopProxy = winit::event_loop::EventLoopProxy<CustomEvent>;
+pub type EventLoop = winit::event_loop::EventLoop<()>;
+pub type Event<'a> = winit::event::Event<'a, ()>;
 
 #[derive(Debug)]
 pub struct Game {
     display: Display,
-    interface: Interface,
     textures: Textures,
 
     field: Field,
     field_populated: bool,
+
+    cursor_position: (u32, u32),
 }
 
 impl Game {
@@ -51,11 +43,12 @@ impl Game {
 
         Game {
             display,
-            interface: Interface::new(event_loop.create_proxy()),
             textures,
 
             field,
             field_populated: false,
+
+            cursor_position: (0, 0),
         }
     }
 
@@ -67,7 +60,7 @@ impl Game {
     }
 
     fn event_handler(&mut self, event: Event, control_flow: &mut ControlFlow) {
-        use winit::event::WindowEvent;
+        use winit::event::WindowEvent::*;
 
         match event {
             Event::MainEventsCleared => {
@@ -75,26 +68,38 @@ impl Game {
                 self.render();
             }
 
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => *control_flow = ControlFlow::Exit,
+            Event::WindowEvent { event, .. } => match event {
+                CloseRequested => *control_flow = ControlFlow::Exit,
 
-            Event::UserEvent(ref event) => match event {
-                CustomEvent::InterfaceEvent(event) => match event {
-                    InterfaceEvent::RevealCell(x, y) => {
-                        self.reveal(*x, *y);
-                    }
-                    InterfaceEvent::ToggleFlagCell(x, y) => {
-                        self.field.toggle_flag(*x, *y);
-                    }
+                CursorMoved { position, .. } => {
+                    self.cursor_position = (position.x as u32, position.y as u32);
                 }
-            }
+                MouseInput { state, button, .. } =>
+                    if let winit::event::ElementState::Pressed = state {
+                        println!("{:?}", button);
+                        use winit::event::MouseButton;
+
+                        let (x, y) = (
+                            (self.cursor_position.0 * self.field.width() as u32 / WINDOW_WIDTH) as u8,
+                            (self.cursor_position.1 * self.field.height() as u32 / WINDOW_HEIGHT) as u8,
+                        );
+
+                        match button {
+                            MouseButton::Left => self.reveal(x, y),
+                            MouseButton::Right => self.toggle_flag(x, y),
+                            _ => (),
+                        }
+                    }
+
+                _ => (),
+            },
 
             _ => (),
         }
+    }
 
-        self.interface.on_event(&event, &self.field);
+    pub fn field(&self) -> &Field {
+        &self.field
     }
 
     pub fn reveal(&mut self, x: u8, y: u8) {
@@ -104,6 +109,10 @@ impl Game {
         }
 
         self.field.reveal(x, y);
+    }
+
+    pub fn toggle_flag(&mut self, x: u8, y: u8) {
+        self.field.toggle_flag(x, y);
     }
 
     fn update(&self) {}

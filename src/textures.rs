@@ -5,6 +5,7 @@ use wgpu::Texture;
 pub struct Textures {
     pub mine: Texture,
     pub unrevealed: Texture,
+    pub revealing: Texture,
     pub flag: Texture,
     pub numbers: [Texture; 9],
 }
@@ -14,6 +15,7 @@ impl Textures {
         Self {
             mine: Textures::load(display, include_bytes!("textures/mine.png")),
             unrevealed: Textures::load(display, include_bytes!("textures/unrevealed.png")),
+            revealing: Textures::load(display, include_bytes!("textures/revealing.png")),
             flag: Textures::load(display, include_bytes!("textures/flag.png")),
             numbers: [
                 Textures::load(display, include_bytes!("textures/0.png")),

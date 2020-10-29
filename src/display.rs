@@ -87,7 +87,8 @@ impl Display {
     fn renderer(&mut self) -> Renderer {
         let frame = match self.swap_chain.get_current_frame() {
             Ok(frame) => frame,
-            Err(_) => {
+            Err(_err) => {
+                println!("{:?}", _err);
                 self.swap_chain = self
                     .device
                     .create_swap_chain(&self.surface, &self.swap_chain_descriptor);
@@ -111,13 +112,15 @@ impl Display {
 
     /// Expects data in row major 8-bit RGBA format (sRGB)
     pub fn create_texture(&self, data: &[u8], width: u32, height: u32) -> Texture {
+        let extent = wgpu::Extent3d {
+            width,
+            height,
+            depth: 1,
+        };
+
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
             label: None,
-            size: wgpu::Extent3d {
-                width,
-                height,
-                depth: 1,
-            },
+            size: extent,
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -137,11 +140,7 @@ impl Display {
                 bytes_per_row: 4 * width,
                 rows_per_image: 0,
             },
-            wgpu::Extent3d {
-                width,
-                height,
-                depth: 1,
-            },
+            extent,
         );
 
         texture
