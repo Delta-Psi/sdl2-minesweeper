@@ -110,14 +110,20 @@ impl Field {
         x as usize + y as usize * self.width as usize
     }
 
-    /// Returns true if the cell is a mine.
+    /// Returns true if the cell is a mine. Doesn't
+    /// modify anything and returns false if it's flagged.
     pub fn reveal(&mut self, x: u8, y: u8) -> bool {
         let cell = self.get_cell_mut(x, y);
         if cell.revealed {
             return cell.has_mine;
         }
-        cell.revealed = true;
+        if cell.flagged {
+            return false;
+        }
 
+        println!("revealing {} {}", x, y);
+
+        cell.revealed = true;
         if cell.has_mine {
             true
         } else if cell.neighboring_mines == 0 {
@@ -133,7 +139,13 @@ impl Field {
         }
     }
 
+    /// Only performs the toggle if the cell isn't
+    /// revealed.
     pub fn toggle_flag(&mut self, x: u8, y: u8) {
-        self.get_cell_mut(x, y).flagged ^= true;
+        let cell = self.get_cell_mut(x, y);
+
+        if !cell.revealed {
+            cell.flagged ^= true;
+        }
     }
 }

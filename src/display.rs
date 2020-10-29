@@ -88,7 +88,7 @@ impl Display {
         let frame = match self.swap_chain.get_current_frame() {
             Ok(frame) => frame,
             Err(_err) => {
-                println!("{:?}", _err);
+                println!("recreating swap chain: {:?}", _err);
                 self.swap_chain = self
                     .device
                     .create_swap_chain(&self.surface, &self.swap_chain_descriptor);
