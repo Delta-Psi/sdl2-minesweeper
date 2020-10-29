@@ -32,6 +32,7 @@ pub struct Game {
     field_populated: bool,
 
     cursor_position: (u32, u32),
+    cursor_pressed: bool,
 }
 
 impl Game {
@@ -49,6 +50,7 @@ impl Game {
             field_populated: false,
 
             cursor_position: (0, 0),
+            cursor_pressed: false,
         }
     }
 
@@ -74,22 +76,29 @@ impl Game {
                 CursorMoved { position, .. } => {
                     self.cursor_position = (position.x as u32, position.y as u32);
                 }
-                MouseInput { state, button, .. } =>
-                    if let winit::event::ElementState::Pressed = state {
-                        println!("{:?}", button);
-                        use winit::event::MouseButton;
+                MouseInput { state, button, .. } => {
+                    use winit::event::{ElementState, MouseButton};
+                    let (x, y) = (
+                        (self.cursor_position.0 * self.field.width() as u32 / WINDOW_WIDTH) as u8,
+                        (self.cursor_position.1 * self.field.height() as u32 / WINDOW_HEIGHT) as u8,
+                    );
 
-                        let (x, y) = (
-                            (self.cursor_position.0 * self.field.width() as u32 / WINDOW_WIDTH) as u8,
-                            (self.cursor_position.1 * self.field.height() as u32 / WINDOW_HEIGHT) as u8,
-                        );
-
-                        match button {
-                            MouseButton::Left => self.reveal(x, y),
+                    match state {
+                        ElementState::Pressed => match button {
+                            MouseButton::Left => self.cursor_pressed = true,
                             MouseButton::Right => self.toggle_flag(x, y),
                             _ => (),
                         }
+
+                        ElementState::Released => {
+                            if button == MouseButton::Left {
+                                self.cursor_pressed = false;
+
+                                self.reveal(x, y);
+                            }
+                        }
                     }
+                }
 
                 _ => (),
             },
@@ -120,6 +129,8 @@ impl Game {
     fn render(&mut self) {
         let field = &self.field;
         let textures = &self.textures;
+        let cursor_position = self.cursor_position;
+        let cursor_pressed = self.cursor_pressed;
 
         self.display.render(move |renderer| {
             renderer.clear((0.5, 0.5, 0.5));
@@ -127,6 +138,10 @@ impl Game {
             for x in 0..FIELD_WIDTH {
                 for y in 0..FIELD_HEIGHT {
                     let cell = field.get_cell(x, y);
+                    let (pressed_x, pressed_y) = (
+                        (cursor_position.0 * field.width() as u32 / WINDOW_WIDTH) as u8,
+                        (cursor_position.1 * field.height() as u32 / WINDOW_HEIGHT) as u8,
+                    );
 
                     let texture_view = if cell.revealed {
                         if cell.has_mine {
@@ -136,6 +151,8 @@ impl Game {
                         }
                     } else if cell.flagged {
                         &textures.flag
+                    } else if cursor_pressed && x == pressed_x && y == pressed_y {
+                        &textures.pressed
                     } else {
                         &textures.unrevealed
                     }
