@@ -188,15 +188,19 @@ impl Game {
                     } else {
                         &self.textures.numbers[cell.neighboring_mines as usize]
                     }
-                } else if cell.flagged {
-                    &self.textures.flag
                 } else if self
                     .state
                     .hovering
                     .map(|(pressed_x, pressed_y)| x == pressed_x && y == pressed_y)
                     .unwrap_or(false)
                 {
-                    &self.textures.hover
+                    if cell.flagged {
+                        &self.textures.hover_flag
+                    } else {
+                        &self.textures.hover
+                    }
+                } else if cell.flagged {
+                    &self.textures.flag
                 } else {
                     &self.textures.unrevealed
                 };

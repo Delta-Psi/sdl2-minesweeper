@@ -8,6 +8,7 @@ pub struct Textures {
     pub unrevealed: Texture,
     pub hover: Texture,
     pub flag: Texture,
+    pub hover_flag: Texture,
     pub numbers: [Texture; 9],
 }
 
@@ -26,6 +27,7 @@ impl Textures {
             unrevealed: load!(tc, "textures/unrevealed.png"),
             hover: load!(tc, "textures/hover.png"),
             flag: load!(tc, "textures/flag.png"),
+            hover_flag: load!(tc, "textures/hover_flag.png"),
             numbers: [
                 load!(tc, "textures/0.png"),
                 load!(tc, "textures/1.png"),
