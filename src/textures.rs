@@ -57,6 +57,15 @@ impl Textures {
             4 * info.width,
             sdl2::pixels::PixelFormatEnum::RGBA32,
         ).unwrap();
-        texture_creator.create_texture_from_surface(surface).unwrap()
+        let mut texture = texture_creator.create_texture_from_surface(surface).unwrap();
+
+        // ensure the texture is filtered
+        texture.gl_with_bind(|_, _| {
+            unsafe {
+                gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+            }
+        });
+
+        texture
     }
 }

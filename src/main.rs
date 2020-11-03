@@ -72,11 +72,14 @@ impl Game {
         let video = sdl.video().unwrap();
 
         let window = video.window("sdl2 minesweeper", WINDOW_WIDTH, WINDOW_HEIGHT)
+            .opengl()
             .hidden()
             .build().unwrap();
         let canvas = window.into_canvas()
             .present_vsync()
             .build().unwrap();
+
+        gl::load_with(|s| video.gl_get_proc_address(s) as *const _);
 
         let textures = Textures::new(&canvas);
 
