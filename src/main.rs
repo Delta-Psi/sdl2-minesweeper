@@ -17,6 +17,32 @@ const FIELD_WIDTH: u8 = 8;
 const FIELD_HEIGHT: u8 = 8;
 const MINE_COUNT: u16 = 8;
 
+#[derive(Debug)]
+pub struct State {
+    field: Field,
+    field_populated: bool,
+    pressed_cell: Option<(u8, u8)>,
+}
+
+impl State {
+    pub fn field(&self) -> &Field {
+        &self.field
+    }
+
+    pub fn reveal(&mut self, x: u8, y: u8) {
+        if !self.field_populated {
+            self.field.populate(MINE_COUNT, Some((x, y)), &mut rand::thread_rng());
+            self.field_populated = true;
+        }
+
+        self.field.reveal(x, y);
+    }
+
+    pub fn toggle_flag(&mut self, x: u8, y: u8) {
+        self.field.toggle_flag(x, y);
+    }
+}
+
 pub struct Game {
     sdl: Sdl,
     canvas: WindowCanvas,
@@ -24,9 +50,7 @@ pub struct Game {
 
     running: bool,
 
-    field: Field,
-    field_populated: bool,
-    pressed_cell: Option<(u8, u8)>,
+    state: State,
 }
 
 impl Game {
@@ -52,9 +76,11 @@ impl Game {
 
             running: false,
 
-            field,
-            field_populated: false,
-            pressed_cell: None,
+            state: State {
+                field,
+                field_populated: false,
+                pressed_cell: None,
+            },
         }
     }
 
@@ -75,8 +101,8 @@ impl Game {
 
     fn map_window_coords(&self, x: i32, y: i32) -> (u8, u8) {
         (
-            (x as u32 * self.field.width() as u32 / WINDOW_WIDTH) as u8,
-            (y as u32 * self.field.height() as u32 / WINDOW_HEIGHT) as u8,
+            (x as u32 * self.state.field.width() as u32 / WINDOW_WIDTH) as u8,
+            (y as u32 * self.state.field.height() as u32 / WINDOW_HEIGHT) as u8,
         )
     }
 
@@ -91,44 +117,35 @@ impl Game {
             Event::MouseMotion { mousestate, x, y, .. } => {
                 if mousestate.left() {
                     let (x, y) = self.map_window_coords(x, y);
-                    self.pressed_cell = Some((x, y));
+                    self.state.pressed_cell = Some((x, y));
                 }
             }
 
             Event::MouseButtonDown { mouse_btn, x, y, .. } => {
-                if mouse_btn == MouseButton::Right {
-                    let (x, y) = self.map_window_coords(x, y);
-                    self.toggle_flag(x, y)
+                let (x, y) = self.map_window_coords(x, y);
+
+                match mouse_btn  {
+                    MouseButton::Right => {
+                        self.state.toggle_flag(x, y);
+                    }
+                    MouseButton::Left => {
+                        self.state.pressed_cell = Some((x, y));
+                    }
+
+                    _ => (),
                 }
             }
 
             Event::MouseButtonUp { mouse_btn, x, y, .. } => {
                 if mouse_btn == MouseButton::Left {
                     let (x, y) = self.map_window_coords(x, y);
-                    self.reveal(x, y);
-                    self.pressed_cell = None;
+                    self.state.reveal(x, y);
+                    self.state.pressed_cell = None;
                 }
             }
 
             _ => (),
         }
-    }
-
-    pub fn field(&self) -> &Field {
-        &self.field
-    }
-
-    pub fn reveal(&mut self, x: u8, y: u8) {
-        if !self.field_populated {
-            self.field.populate(MINE_COUNT, Some((x, y)), &mut rand::thread_rng());
-            self.field_populated = true;
-        }
-
-        self.field.reveal(x, y);
-    }
-
-    pub fn toggle_flag(&mut self, x: u8, y: u8) {
-        self.field.toggle_flag(x, y);
     }
 
     fn update(&self) {}
@@ -139,7 +156,7 @@ impl Game {
 
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
-                let cell = self.field.get_cell(x, y);
+                let cell = self.state.field.get_cell(x, y);
 
                 let texture = if cell.revealed {
                     if cell.has_mine {
@@ -149,7 +166,7 @@ impl Game {
                     }
                 } else if cell.flagged {
                     &self.textures.flag
-                } else if self.pressed_cell.map(|(pressed_x, pressed_y)| x == pressed_x && y == pressed_y)
+                } else if self.state.pressed_cell.map(|(pressed_x, pressed_y)| x == pressed_x && y == pressed_y)
                     .unwrap_or(false)
                 {
                     &self.textures.pressed
