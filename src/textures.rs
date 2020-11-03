@@ -1,8 +1,9 @@
-use crate::display::Display;
-use wgpu::Texture;
+use sdl2::render::{TextureCreator, Texture, WindowCanvas};
+use sdl2::video::WindowContext;
 
-#[derive(Debug)]
 pub struct Textures {
+    _texture_creator: TextureCreator<WindowContext>,
+
     pub mine: Texture,
     pub unrevealed: Texture,
     pub pressed: Texture,
@@ -10,28 +11,36 @@ pub struct Textures {
     pub numbers: [Texture; 9],
 }
 
+macro_rules! load {
+    ($texture_creator:expr, $path:expr) => {Textures::load(&$texture_creator, include_bytes!($path))}
+}
+
 impl Textures {
-    pub fn new(display: &Display) -> Self {
+    pub fn new(canvas: &WindowCanvas) -> Self {
+        let tc = canvas.texture_creator();
+
         Self {
-            mine: Textures::load(display, include_bytes!("textures/mine.png")),
-            unrevealed: Textures::load(display, include_bytes!("textures/unrevealed.png")),
-            pressed: Textures::load(display, include_bytes!("textures/pressed.png")),
-            flag: Textures::load(display, include_bytes!("textures/flag.png")),
+            mine: load!(tc, "textures/mine.png"),
+            unrevealed: load!(tc, "textures/unrevealed.png"),
+            pressed: load!(tc, "textures/pressed.png"),
+            flag: load!(tc, "textures/flag.png"),
             numbers: [
-                Textures::load(display, include_bytes!("textures/0.png")),
-                Textures::load(display, include_bytes!("textures/1.png")),
-                Textures::load(display, include_bytes!("textures/2.png")),
-                Textures::load(display, include_bytes!("textures/3.png")),
-                Textures::load(display, include_bytes!("textures/4.png")),
-                Textures::load(display, include_bytes!("textures/5.png")),
-                Textures::load(display, include_bytes!("textures/6.png")),
-                Textures::load(display, include_bytes!("textures/7.png")),
-                Textures::load(display, include_bytes!("textures/8.png")),
+                load!(tc, "textures/0.png"),
+                load!(tc, "textures/1.png"),
+                load!(tc, "textures/2.png"),
+                load!(tc, "textures/3.png"),
+                load!(tc, "textures/4.png"),
+                load!(tc, "textures/5.png"),
+                load!(tc, "textures/6.png"),
+                load!(tc, "textures/7.png"),
+                load!(tc, "textures/8.png"),
             ],
+
+            _texture_creator: tc,
         }
     }
 
-    fn load(display: &Display, data: &[u8]) -> Texture {
+    fn load(texture_creator: &TextureCreator<WindowContext>, data: &[u8]) -> Texture {
         let decoder = png::Decoder::new(std::io::Cursor::new(data));
         let (info, mut reader) = decoder.read_info().unwrap();
 
@@ -42,6 +51,12 @@ impl Textures {
         assert_eq!(info.bit_depth, png::BitDepth::Eight);
         assert_eq!(info.color_type, png::ColorType::RGBA);
 
-        display.create_texture(&buf, info.width, info.height)
+        let surface = sdl2::surface::Surface::from_data(
+            &mut buf,
+            info.width, info.height,
+            4 * info.width,
+            sdl2::pixels::PixelFormatEnum::RGBA32,
+        ).unwrap();
+        texture_creator.create_texture_from_surface(surface).unwrap()
     }
 }

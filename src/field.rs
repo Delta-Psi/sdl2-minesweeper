@@ -121,8 +121,6 @@ impl Field {
             return false;
         }
 
-        println!("revealing {} {}", x, y);
-
         cell.revealed = true;
         if cell.has_mine {
             true

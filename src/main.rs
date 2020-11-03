@@ -1,17 +1,13 @@
 pub mod field;
 use field::Field;
 
-pub mod display;
-use display::Display;
-
-pub mod shaders;
-
 pub mod textures;
 use textures::Textures;
 
 use sdl2::{
     Sdl,
     event::Event,
+    render::WindowCanvas,
 };
 
 const WINDOW_WIDTH: u32 = 480;
@@ -23,7 +19,7 @@ const MINE_COUNT: u16 = 8;
 
 pub struct Game {
     sdl: Sdl,
-    display: Display,
+    canvas: WindowCanvas,
     textures: Textures,
 
     running: bool,
@@ -38,13 +34,20 @@ impl Game {
         let field = Field::new(FIELD_WIDTH, FIELD_HEIGHT);
 
         let sdl = sdl2::init().unwrap();
+        let video = sdl.video().unwrap();
 
-        let display = Display::new(&sdl);
-        let textures = Textures::new(&display);
+        let window = video.window("sdl2 minesweeper", WINDOW_WIDTH, WINDOW_HEIGHT)
+            .hidden()
+            .build().unwrap();
+        let canvas = window.into_canvas()
+            .present_vsync()
+            .build().unwrap();
+
+        let textures = Textures::new(&canvas);
 
         Game {
             sdl,
-            display,
+            canvas,
             textures,
 
             running: false,
@@ -56,7 +59,7 @@ impl Game {
     }
 
     pub fn run(mut self) {
-        self.display.set_visible(true);
+        self.canvas.window_mut().show();
         self.running = true;
 
         let mut event_pump = self.sdl.event_pump().unwrap();
@@ -131,43 +134,43 @@ impl Game {
     fn update(&self) {}
 
     fn render(&mut self) {
-        let field = &self.field;
-        let textures = &self.textures;
-        let pressed_cell = &self.pressed_cell;
+        self.canvas.set_draw_color((255, 0, 255));
+        self.canvas.clear();
 
-        self.display.render(move |renderer| {
-            renderer.clear((0.5, 0.5, 0.5));
+        for x in 0..FIELD_WIDTH {
+            for y in 0..FIELD_HEIGHT {
+                let cell = self.field.get_cell(x, y);
 
-            for x in 0..FIELD_WIDTH {
-                for y in 0..FIELD_HEIGHT {
-                    let cell = field.get_cell(x, y);
-
-                    let texture_view = if cell.revealed {
-                        if cell.has_mine {
-                            &textures.mine
-                        } else {
-                            &textures.numbers[cell.neighboring_mines as usize]
-                        }
-                    } else if cell.flagged {
-                        &textures.flag
-                    } else if pressed_cell.map(|(pressed_x, pressed_y)| x == pressed_x && y == pressed_y)
-                        .unwrap_or(false)
-                    {
-                        &textures.pressed
+                let texture = if cell.revealed {
+                    if cell.has_mine {
+                        &self.textures.mine
                     } else {
-                        &textures.unrevealed
+                        &self.textures.numbers[cell.neighboring_mines as usize]
                     }
-                    .create_view(&Default::default());
+                } else if cell.flagged {
+                    &self.textures.flag
+                } else if self.pressed_cell.map(|(pressed_x, pressed_y)| x == pressed_x && y == pressed_y)
+                    .unwrap_or(false)
+                {
+                    &self.textures.pressed
+                } else {
+                    &self.textures.unrevealed
+                };
 
-                    let origin_x = x as f32 / FIELD_WIDTH as f32 * 2.0 - 1.0;
-                    let origin_y = 1.0 - (y+1) as f32 / FIELD_HEIGHT as f32 * 2.0;
-                    let bounds_x = 2.0 / FIELD_WIDTH as f32;
-                    let bounds_y = 2.0 / FIELD_HEIGHT as f32;
+                let origin_x = x as i32 * WINDOW_WIDTH as i32 / FIELD_WIDTH as i32;
+                let origin_y = y as i32 * WINDOW_HEIGHT as i32 / FIELD_HEIGHT as i32;
+                let bounds_x = WINDOW_WIDTH / FIELD_WIDTH as u32;
+                let bounds_y = WINDOW_HEIGHT / FIELD_HEIGHT as u32;
 
-                    renderer.draw_rect((origin_x, origin_y), (bounds_x, bounds_y), &texture_view);
-                }
+                self.canvas.copy(
+                    texture,
+                    None,
+                    Some((origin_x, origin_y, bounds_x, bounds_y).into())
+                ).unwrap();
             }
-        });
+        }
+
+        self.canvas.present();
     }
 }
 
