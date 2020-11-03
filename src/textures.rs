@@ -1,4 +1,4 @@
-use sdl2::render::{TextureCreator, Texture, WindowCanvas};
+use sdl2::render::{Texture, TextureCreator, WindowCanvas};
 use sdl2::video::WindowContext;
 
 pub struct Textures {
@@ -12,7 +12,9 @@ pub struct Textures {
 }
 
 macro_rules! load {
-    ($texture_creator:expr, $path:expr) => {Textures::load(&$texture_creator, include_bytes!($path))}
+    ($texture_creator:expr, $path:expr) => {
+        Textures::load(&$texture_creator, include_bytes!($path))
+    };
 }
 
 impl Textures {
@@ -53,17 +55,19 @@ impl Textures {
 
         let surface = sdl2::surface::Surface::from_data(
             &mut buf,
-            info.width, info.height,
+            info.width,
+            info.height,
             4 * info.width,
             sdl2::pixels::PixelFormatEnum::RGBA32,
-        ).unwrap();
-        let mut texture = texture_creator.create_texture_from_surface(surface).unwrap();
+        )
+        .unwrap();
+        let mut texture = texture_creator
+            .create_texture_from_surface(surface)
+            .unwrap();
 
         // ensure the texture is filtered
-        texture.gl_with_bind(|_, _| {
-            unsafe {
-                gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-            }
+        texture.gl_with_bind(|_, _| unsafe {
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
         });
 
         texture

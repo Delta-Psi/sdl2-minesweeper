@@ -133,8 +133,8 @@ impl Field {
         if cell.has_mine {
             true
         } else if cell.neighboring_mines == 0 {
-            for x in x.saturating_sub(1) ..= (x+1).min(self.width-1) {
-                for y in y.saturating_sub(1) ..= (y+1).min(self.height-1) {
+            for x in x.saturating_sub(1)..=(x + 1).min(self.width - 1) {
+                for y in y.saturating_sub(1)..=(y + 1).min(self.height - 1) {
                     self.reveal(x, y);
                 }
             }

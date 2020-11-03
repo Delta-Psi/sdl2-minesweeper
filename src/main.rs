@@ -4,12 +4,8 @@ use field::Field;
 pub mod textures;
 use textures::Textures;
 
-use sdl2::{
-    Sdl,
-    event::Event,
-    render::WindowCanvas,
-};
-use std::time::{Instant, Duration};
+use sdl2::{event::Event, render::WindowCanvas, Sdl};
+use std::time::{Duration, Instant};
 
 const WINDOW_WIDTH: u32 = 480;
 const WINDOW_HEIGHT: u32 = 480;
@@ -43,7 +39,8 @@ impl State {
 
     pub fn reveal(&mut self, x: u8, y: u8) {
         if !self.field_populated {
-            self.field.populate(MINE_COUNT, Some((x, y)), &mut rand::thread_rng());
+            self.field
+                .populate(MINE_COUNT, Some((x, y)), &mut rand::thread_rng());
             self.field_populated = true;
         }
 
@@ -72,13 +69,13 @@ impl Game {
         let sdl = sdl2::init().unwrap();
         let video = sdl.video().unwrap();
 
-        let window = video.window("sdl2 minesweeper", WINDOW_WIDTH, WINDOW_HEIGHT)
+        let window = video
+            .window("sdl2 minesweeper", WINDOW_WIDTH, WINDOW_HEIGHT)
             .opengl()
             .hidden()
-            .build().unwrap();
-        let canvas = window.into_canvas()
-            .present_vsync()
-            .build().unwrap();
+            .build()
+            .unwrap();
+        let canvas = window.into_canvas().present_vsync().build().unwrap();
 
         gl::load_with(|s| video.gl_get_proc_address(s) as *const _);
 
@@ -138,10 +135,12 @@ impl Game {
                 self.state.hovering = Some((x, y));
             }
 
-            Event::MouseButtonDown { mouse_btn, x, y, .. } => {
+            Event::MouseButtonDown {
+                mouse_btn, x, y, ..
+            } => {
                 let (x, y) = self.map_window_coords(x, y);
 
-                match mouse_btn  {
+                match mouse_btn {
                     MouseButton::Right => {
                         self.state.toggle_flag(x, y);
                     }
@@ -150,7 +149,9 @@ impl Game {
                 }
             }
 
-            Event::MouseButtonUp { mouse_btn, x, y, .. } => {
+            Event::MouseButtonUp {
+                mouse_btn, x, y, ..
+            } => {
                 if mouse_btn == MouseButton::Left {
                     let (x, y) = self.map_window_coords(x, y);
                     self.state.reveal(x, y);
@@ -163,14 +164,18 @@ impl Game {
 
     fn update(&mut self) {
         let timer = self.state.timer().unwrap().as_secs();
-        let mines_remaining = self.state.field.mine_count() as i32 - self.state.field.flagged_cells() as i32;
+        let mines_remaining =
+            self.state.field.mine_count() as i32 - self.state.field.flagged_cells() as i32;
 
-        self.canvas.window_mut().set_title(&format!(
+        self.canvas
+            .window_mut()
+            .set_title(&format!(
                 "wgpu minesweeper - {:02}:{:02} - {} remaining",
                 timer / 60,
                 timer % 60,
                 mines_remaining,
-        )).unwrap();
+            ))
+            .unwrap();
     }
 
     fn render(&mut self) {
@@ -189,7 +194,10 @@ impl Game {
                     }
                 } else if cell.flagged {
                     &self.textures.flag
-                } else if self.state.hovering.map(|(pressed_x, pressed_y)| x == pressed_x && y == pressed_y)
+                } else if self
+                    .state
+                    .hovering
+                    .map(|(pressed_x, pressed_y)| x == pressed_x && y == pressed_y)
                     .unwrap_or(false)
                 {
                     &self.textures.hover
@@ -202,11 +210,13 @@ impl Game {
                 let bounds_x = WINDOW_WIDTH / FIELD_WIDTH as u32;
                 let bounds_y = WINDOW_HEIGHT / FIELD_HEIGHT as u32;
 
-                self.canvas.copy(
-                    texture,
-                    None,
-                    Some((origin_x, origin_y, bounds_x, bounds_y).into())
-                ).unwrap();
+                self.canvas
+                    .copy(
+                        texture,
+                        None,
+                        Some((origin_x, origin_y, bounds_x, bounds_y).into()),
+                    )
+                    .unwrap();
             }
         }
 
