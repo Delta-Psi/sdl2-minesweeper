@@ -140,12 +140,8 @@ impl Game {
             } => {
                 let (x, y) = self.map_window_coords(x, y);
 
-                match mouse_btn {
-                    MouseButton::Right => {
+                if mouse_btn == MouseButton::Right {
                         self.state.toggle_flag(x, y);
-                    }
-
-                    _ => (),
                 }
             }
 
