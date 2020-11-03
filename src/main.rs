@@ -9,6 +9,7 @@ use sdl2::{
     event::Event,
     render::WindowCanvas,
 };
+use std::time::{Instant, Duration};
 
 const WINDOW_WIDTH: u32 = 480;
 const WINDOW_HEIGHT: u32 = 480;
@@ -22,11 +23,21 @@ pub struct State {
     field: Field,
     field_populated: bool,
     pressed_cell: Option<(u8, u8)>,
+
+    timer_started: Option<Instant>,
 }
 
 impl State {
     pub fn field(&self) -> &Field {
         &self.field
+    }
+
+    pub fn start_timer(&mut self) {
+        self.timer_started = Some(Instant::now());
+    }
+
+    pub fn timer(&self) -> Option<Duration> {
+        self.timer_started.map(|i| i.elapsed())
     }
 
     pub fn reveal(&mut self, x: u8, y: u8) {
@@ -80,6 +91,7 @@ impl Game {
                 field,
                 field_populated: false,
                 pressed_cell: None,
+                timer_started: None,
             },
         }
     }
@@ -87,6 +99,7 @@ impl Game {
     pub fn run(mut self) {
         self.canvas.window_mut().show();
         self.running = true;
+        self.state.start_timer();
 
         let mut event_pump = self.sdl.event_pump().unwrap();
         while self.running {
@@ -148,7 +161,17 @@ impl Game {
         }
     }
 
-    fn update(&self) {}
+    fn update(&mut self) {
+        let timer = self.state.timer().unwrap().as_secs();
+        let mines_remaining = self.state.field.mine_count() as i32 - self.state.field.flagged_cells() as i32;
+
+        self.canvas.window_mut().set_title(&format!(
+                "wgpu minesweeper - {:02}:{:02} - {} remaining",
+                timer / 60,
+                timer % 60,
+                mines_remaining,
+        )).unwrap();
+    }
 
     fn render(&mut self) {
         self.canvas.set_draw_color((255, 0, 255));

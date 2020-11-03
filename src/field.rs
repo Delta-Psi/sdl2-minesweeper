@@ -24,7 +24,9 @@ pub struct Field {
     cells: Vec<Cell>,
     width: u8,
     height: u8,
+
     mine_count: u16,
+    flagged_cells: u16,
 }
 
 impl Field {
@@ -33,7 +35,9 @@ impl Field {
             cells: Vec::new(),
             width,
             height,
+
             mine_count: 0,
+            flagged_cells: 0,
         };
         field
             .cells
@@ -84,6 +88,10 @@ impl Field {
 
     pub fn mine_count(&self) -> u16 {
         self.mine_count
+    }
+
+    pub fn flagged_cells(&self) -> u16 {
+        self.flagged_cells
     }
 
     pub fn width(&self) -> u8 {
@@ -144,6 +152,12 @@ impl Field {
 
         if !cell.revealed {
             cell.flagged ^= true;
+
+            if cell.flagged {
+                self.flagged_cells += 1;
+            } else {
+                self.flagged_cells -= 1;
+            }
         }
     }
 }
