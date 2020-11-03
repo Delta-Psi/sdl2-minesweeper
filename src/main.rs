@@ -22,7 +22,8 @@ const MINE_COUNT: u16 = 8;
 pub struct State {
     field: Field,
     field_populated: bool,
-    pressed_cell: Option<(u8, u8)>,
+
+    hovering: Option<(u8, u8)>,
 
     timer_started: Option<Instant>,
 }
@@ -93,7 +94,9 @@ impl Game {
             state: State {
                 field,
                 field_populated: false,
-                pressed_cell: None,
+
+                hovering: None,
+
                 timer_started: None,
             },
         }
@@ -130,11 +133,9 @@ impl Game {
                 self.running = false;
             }
 
-            Event::MouseMotion { mousestate, x, y, .. } => {
-                if mousestate.left() {
-                    let (x, y) = self.map_window_coords(x, y);
-                    self.state.pressed_cell = Some((x, y));
-                }
+            Event::MouseMotion { x, y, .. } => {
+                let (x, y) = self.map_window_coords(x, y);
+                self.state.hovering = Some((x, y));
             }
 
             Event::MouseButtonDown { mouse_btn, x, y, .. } => {
@@ -143,9 +144,6 @@ impl Game {
                 match mouse_btn  {
                     MouseButton::Right => {
                         self.state.toggle_flag(x, y);
-                    }
-                    MouseButton::Left => {
-                        self.state.pressed_cell = Some((x, y));
                     }
 
                     _ => (),
@@ -156,7 +154,6 @@ impl Game {
                 if mouse_btn == MouseButton::Left {
                     let (x, y) = self.map_window_coords(x, y);
                     self.state.reveal(x, y);
-                    self.state.pressed_cell = None;
                 }
             }
 
@@ -192,10 +189,10 @@ impl Game {
                     }
                 } else if cell.flagged {
                     &self.textures.flag
-                } else if self.state.pressed_cell.map(|(pressed_x, pressed_y)| x == pressed_x && y == pressed_y)
+                } else if self.state.hovering.map(|(pressed_x, pressed_y)| x == pressed_x && y == pressed_y)
                     .unwrap_or(false)
                 {
-                    &self.textures.pressed
+                    &self.textures.hover
                 } else {
                     &self.textures.unrevealed
                 };

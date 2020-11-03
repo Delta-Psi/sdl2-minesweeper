@@ -6,7 +6,7 @@ pub struct Textures {
 
     pub mine: Texture,
     pub unrevealed: Texture,
-    pub pressed: Texture,
+    pub hover: Texture,
     pub flag: Texture,
     pub numbers: [Texture; 9],
 }
@@ -22,7 +22,7 @@ impl Textures {
         Self {
             mine: load!(tc, "textures/mine.png"),
             unrevealed: load!(tc, "textures/unrevealed.png"),
-            pressed: load!(tc, "textures/pressed.png"),
+            hover: load!(tc, "textures/hover.png"),
             flag: load!(tc, "textures/flag.png"),
             numbers: [
                 load!(tc, "textures/0.png"),
