@@ -12,7 +12,7 @@ const WINDOW_HEIGHT: u32 = 480;
 
 const FIELD_WIDTH: u8 = 8;
 const FIELD_HEIGHT: u8 = 8;
-const MINE_COUNT: u16 = 8;
+const MINE_COUNT: u16 = 10;
 
 #[derive(Debug)]
 pub struct State {
@@ -42,6 +42,7 @@ impl State {
             self.field
                 .populate(MINE_COUNT, Some((x, y)), &mut rand::thread_rng());
             self.field_populated = true;
+            self.start_timer();
         }
 
         self.field.reveal(x, y);
@@ -102,7 +103,6 @@ impl Game {
     pub fn run(mut self) {
         self.canvas.window_mut().show();
         self.running = true;
-        self.state.start_timer();
 
         let mut event_pump = self.sdl.event_pump().unwrap();
         while self.running {
@@ -159,14 +159,14 @@ impl Game {
     }
 
     fn update(&mut self) {
-        let timer = self.state.timer().unwrap().as_secs();
+        let timer = self.state.timer().map(|d| d.as_secs()).unwrap_or(0);
         let mines_remaining =
             self.state.field.mine_count() as i32 - self.state.field.flagged_cells() as i32;
 
         self.canvas
             .window_mut()
             .set_title(&format!(
-                "wgpu minesweeper - {:02}:{:02} - {} remaining",
+                "sdl2 minesweeper - {:02}:{:02} - {} remaining",
                 timer / 60,
                 timer % 60,
                 mines_remaining,
