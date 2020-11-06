@@ -20,6 +20,13 @@ impl Default for Cell {
 }
 
 #[derive(Debug)]
+pub enum RevealResult {
+    Nothing,
+    Success,
+    Mine,
+}
+
+#[derive(Debug)]
 pub struct Field {
     cells: Vec<Cell>,
     width: u8,
@@ -118,20 +125,15 @@ impl Field {
         x as usize + y as usize * self.width as usize
     }
 
-    /// Returns true if the cell is a mine. Doesn't
-    /// modify anything and returns false if it's flagged.
-    pub fn reveal(&mut self, x: u8, y: u8) -> bool {
+    pub fn reveal(&mut self, x: u8, y: u8) -> RevealResult {
         let cell = self.get_cell_mut(x, y);
-        if cell.revealed {
-            return cell.has_mine;
-        }
-        if cell.flagged {
-            return false;
+        if cell.revealed || cell.flagged {
+            return RevealResult::Nothing;
         }
 
         cell.revealed = true;
         if cell.has_mine {
-            true
+            RevealResult::Mine
         } else if cell.neighboring_mines == 0 {
             for x in x.saturating_sub(1)..=(x + 1).min(self.width - 1) {
                 for y in y.saturating_sub(1)..=(y + 1).min(self.height - 1) {
@@ -139,15 +141,15 @@ impl Field {
                 }
             }
 
-            false
+            RevealResult::Success
         } else {
-            false
+            RevealResult::Success
         }
     }
 
     /// Only performs the toggle if the cell isn't
-    /// revealed.
-    pub fn toggle_flag(&mut self, x: u8, y: u8) {
+    /// revealed. Returns true if so.
+    pub fn toggle_flag(&mut self, x: u8, y: u8) -> bool {
         let cell = self.get_cell_mut(x, y);
 
         if !cell.revealed {
@@ -158,6 +160,10 @@ impl Field {
             } else {
                 self.flagged_cells -= 1;
             }
+
+            true
+        } else {
+            false
         }
     }
 }

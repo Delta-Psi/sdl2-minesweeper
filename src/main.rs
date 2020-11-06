@@ -1,5 +1,5 @@
 pub mod field;
-use field::Field;
+use field::{Field, RevealResult};
 
 pub mod textures;
 use textures::Textures;
@@ -85,8 +85,10 @@ impl State {
             self.start_timer();
         }
 
-        self.field.reveal(x, y);
-        callback.play_sound_effect(&SOUND_EFFECTS.dig);
+        match self.field.reveal(x, y) {
+            RevealResult::Success => callback.play_sound_effect(&SOUND_EFFECTS.dig),
+            _ => (),
+        }
     }
 
     pub fn toggle_flag(&mut self, x: u8, y: u8) {
