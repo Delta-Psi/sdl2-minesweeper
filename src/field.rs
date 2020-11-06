@@ -25,6 +25,13 @@ pub enum RevealResult {
 }
 
 #[derive(Debug)]
+pub enum ToggleFlagResult {
+    Nothing,
+    Flagged,
+    Unflagged,
+}
+
+#[derive(Debug)]
 pub struct Field {
     cells: Vec<Cell>,
     width: u8,
@@ -153,7 +160,7 @@ impl Field {
 
     /// Only performs the toggle if the cell isn't
     /// revealed. Returns true if so.
-    pub fn toggle_flag(&mut self, x: u8, y: u8) -> bool {
+    pub fn toggle_flag(&mut self, x: u8, y: u8) -> ToggleFlagResult {
         let cell = self.get_cell_mut(x, y);
 
         if !cell.revealed {
@@ -161,13 +168,15 @@ impl Field {
 
             if cell.flagged {
                 self.flagged_cells += 1;
+
+                ToggleFlagResult::Flagged
             } else {
                 self.flagged_cells -= 1;
-            }
 
-            true
+                ToggleFlagResult::Unflagged
+            }
         } else {
-            false
+            ToggleFlagResult::Nothing
         }
     }
 }
