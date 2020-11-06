@@ -43,12 +43,10 @@ impl sdl2::audio::AudioCallback for AudioCallback {
     fn callback(&mut self, samples: &mut [i16]) {
         let end = samples.len().min(self.sound_effect.len());
 
-        for i in 0..end {
-            samples[i] = self.sound_effect[i];
-        }
+        samples[0..end].copy_from_slice(&self.sound_effect[0..end]);
         self.sound_effect = &self.sound_effect[end..];
-        for i in end..samples.len() {
-            samples[i] = 0;
+        for sample in samples.iter_mut().skip(end) {
+            *sample = 0;
         }
     }
 }
