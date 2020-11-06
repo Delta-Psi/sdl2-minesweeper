@@ -18,7 +18,7 @@ impl SoundEffects {
         let mut reader = lewton::inside_ogg::OggStreamReader::new(cursor).unwrap();
 
         assert_eq!(reader.ident_hdr.audio_channels, CHANNEL_COUNT);
-        assert_eq!(reader.ident_hdr.audio_sample_rate, super::SAMPLE_RATE);
+        assert_eq!(reader.ident_hdr.audio_sample_rate, crate::audio::SAMPLE_RATE);
 
         let mut buf = Vec::new();
         while let Some(samples) = reader.read_dec_packet_itl().unwrap() {
