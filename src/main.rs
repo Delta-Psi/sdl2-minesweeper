@@ -1,5 +1,5 @@
 pub mod field;
-use field::{Field, RevealResult};
+use field::RevealResult;
 
 pub mod textures;
 use textures::Textures;
@@ -10,57 +10,13 @@ use audio::AudioCallback;
 pub mod sfx;
 use sfx::SOUND_EFFECTS;
 
+pub mod state;
+use state::State;
+
 use sdl2::{event::Event, render::WindowCanvas, Sdl, audio::AudioDevice};
-use std::time::{Duration, Instant};
 
 const WINDOW_WIDTH: u32 = 480;
 const WINDOW_HEIGHT: u32 = 480;
-
-const FIELD_WIDTH: u8 = 8;
-const FIELD_HEIGHT: u8 = 8;
-const MINE_COUNT: u16 = 10;
-
-#[derive(Debug)]
-pub struct State {
-    field: Field,
-    field_populated: bool,
-
-    hovering: Option<(u8, u8)>,
-
-    timer_started: Option<Instant>,
-}
-
-impl State {
-    pub fn field(&self) -> &Field {
-        &self.field
-    }
-
-    pub fn start_timer(&mut self) {
-        self.timer_started = Some(Instant::now());
-    }
-
-    pub fn timer(&self) -> Option<Duration> {
-        self.timer_started.map(|i| i.elapsed())
-    }
-
-    pub fn reveal(&mut self, x: u8, y: u8, callback: &mut AudioCallback) {
-        if !self.field_populated {
-            self.field
-                .populate(MINE_COUNT, Some((x, y)), &mut rand::thread_rng());
-            self.field_populated = true;
-            self.start_timer();
-        }
-
-        match self.field.reveal(x, y) {
-            RevealResult::Success => callback.play_sound_effect(&SOUND_EFFECTS.dig),
-            _ => (),
-        }
-    }
-
-    pub fn toggle_flag(&mut self, x: u8, y: u8) {
-        self.field.toggle_flag(x, y);
-    }
-}
 
 pub struct Game {
     sdl: Sdl,
@@ -72,12 +28,11 @@ pub struct Game {
     running: bool,
 
     state: State,
+    hovering: Option<(u8, u8)>,
 }
 
 impl Game {
     pub fn new() -> Self {
-        let field = Field::new(FIELD_WIDTH, FIELD_HEIGHT);
-
         let sdl = sdl2::init().unwrap();
         let video = sdl.video().unwrap();
 
@@ -105,14 +60,8 @@ impl Game {
 
             running: false,
 
-            state: State {
-                field,
-                field_populated: false,
-
-                hovering: None,
-
-                timer_started: None,
-            },
+            state: State::new(),
+            hovering: None,
         }
     }
 
@@ -134,8 +83,8 @@ impl Game {
 
     fn map_window_coords(&self, x: i32, y: i32) -> (u8, u8) {
         (
-            (x as u32 * self.state.field.width() as u32 / WINDOW_WIDTH) as u8,
-            (y as u32 * self.state.field.height() as u32 / WINDOW_HEIGHT) as u8,
+            (x as u32 * self.state.field().width() as u32 / WINDOW_WIDTH) as u8,
+            (y as u32 * self.state.field().height() as u32 / WINDOW_HEIGHT) as u8,
         )
     }
 
@@ -149,7 +98,7 @@ impl Game {
 
             Event::MouseMotion { x, y, .. } => {
                 let (x, y) = self.map_window_coords(x, y);
-                self.state.hovering = Some((x, y));
+                self.hovering = Some((x, y));
             }
 
             Event::MouseButtonDown {
@@ -168,8 +117,14 @@ impl Game {
                 if mouse_btn == MouseButton::Left {
                     let (x, y) = self.map_window_coords(x, y);
 
-                    let mut audio_callback = self.audio_device.lock();
-                    self.state.reveal(x, y, &mut audio_callback);
+                    match self.state.reveal(x, y) {
+                        RevealResult::Success => {
+                            let mut audio_callback = self.audio_device.lock();
+                            audio_callback.play_sound_effect(&SOUND_EFFECTS.dig);
+                        }
+
+                        _ => (),
+                    }
                 }
             }
 
@@ -178,9 +133,8 @@ impl Game {
     }
 
     fn update(&mut self) {
-        let timer = self.state.timer().map(|d| d.as_secs()).unwrap_or(0);
-        let mines_remaining =
-            self.state.field.mine_count() as i32 - self.state.field.flagged_cells() as i32;
+        let timer = self.state.timer().as_secs();
+        let mines_remaining = self.state.mines_remaining();
 
         self.canvas
             .window_mut()
@@ -197,9 +151,12 @@ impl Game {
         self.canvas.set_draw_color((255, 0, 255));
         self.canvas.clear();
 
-        for x in 0..FIELD_WIDTH {
-            for y in 0..FIELD_HEIGHT {
-                let cell = self.state.field.get_cell(x, y);
+        let field_width = self.state.field().width();
+        let field_height = self.state.field().height();
+
+        for x in 0..field_width {
+            for y in 0..field_height {
+                let cell = self.state.field().get_cell(x, y);
 
                 let texture = if cell.revealed {
                     if cell.has_mine {
@@ -208,7 +165,6 @@ impl Game {
                         &self.textures.numbers[cell.neighboring_mines as usize]
                     }
                 } else if self
-                    .state
                     .hovering
                     .map(|(pressed_x, pressed_y)| x == pressed_x && y == pressed_y)
                     .unwrap_or(false)
@@ -224,10 +180,10 @@ impl Game {
                     &self.textures.unrevealed
                 };
 
-                let origin_x = x as i32 * WINDOW_WIDTH as i32 / FIELD_WIDTH as i32;
-                let origin_y = y as i32 * WINDOW_HEIGHT as i32 / FIELD_HEIGHT as i32;
-                let bounds_x = WINDOW_WIDTH / FIELD_WIDTH as u32;
-                let bounds_y = WINDOW_HEIGHT / FIELD_HEIGHT as u32;
+                let origin_x = x as i32 * WINDOW_WIDTH as i32 / field_width as i32;
+                let origin_y = y as i32 * WINDOW_HEIGHT as i32 / field_height as i32;
+                let bounds_x = WINDOW_WIDTH / field_width as u32;
+                let bounds_y = WINDOW_HEIGHT / field_height as u32;
 
                 self.canvas
                     .copy(

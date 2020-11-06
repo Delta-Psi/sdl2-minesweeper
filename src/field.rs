@@ -1,6 +1,4 @@
-use rand::Rng;
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Cell {
     pub has_mine: bool,
     pub revealed: bool,
@@ -34,40 +32,41 @@ pub struct Field {
 
     mine_count: u16,
     flagged_cells: u16,
+
+    populated: bool,
 }
 
 impl Field {
-    pub fn new(width: u8, height: u8) -> Self {
-        let mut field = Self {
-            cells: Vec::new(),
+    pub fn new(width: u8, height: u8, mine_count: u16) -> Self {
+        Self {
+            cells: vec![Default::default(); width as usize * height as usize],
             width,
             height,
 
-            mine_count: 0,
+            mine_count,
             flagged_cells: 0,
-        };
-        field
-            .cells
-            .resize_with(width as usize * height as usize, Default::default);
+
+            populated: false,
+        }
+    }
+
+    pub fn new_populated(width: u8, height: u8, mine_count: u16) -> Self {
+        let mut field = Field::new(width, height, mine_count);
+        field.populate(None);
         field
     }
 
-    pub fn populate<R: Rng + ?Sized>(
-        &mut self,
-        mine_count: u16,
-        safe_cell: Option<(u8, u8)>,
-        rng: &mut R,
-    ) {
+    fn populate(&mut self, safe_cell: Option<(u8, u8)>) {
         let cell_count = self.width as u16 * self.height as u16
-            - self.mine_count
             - if safe_cell.is_some() { 1 } else { 0 };
-        assert!(mine_count <= cell_count);
+        assert!(self.mine_count <= cell_count);
 
         use rand::distributions::{Distribution, Uniform};
         let x_distr = Uniform::new(0, self.width);
         let y_distr = Uniform::new(0, self.height);
+        let rng = &mut rand::thread_rng();
 
-        let mut remaining = mine_count;
+        let mut remaining = self.mine_count;
         while remaining > 0 {
             let x = x_distr.sample(rng);
             let y = y_distr.sample(rng);
@@ -90,7 +89,8 @@ impl Field {
             }
             remaining -= 1;
         }
-        self.mine_count += mine_count;
+        
+        self.populated = true;
     }
 
     pub fn mine_count(&self) -> u16 {
@@ -126,6 +126,10 @@ impl Field {
     }
 
     pub fn reveal(&mut self, x: u8, y: u8) -> RevealResult {
+        if !self.populated {
+            self.populate(Some((x, y)));
+        }
+
         let cell = self.get_cell_mut(x, y);
         if cell.revealed || cell.flagged {
             return RevealResult::Nothing;
