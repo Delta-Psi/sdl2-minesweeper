@@ -1,4 +1,4 @@
-use sdl2::{AudioSubsystem, audio::AudioDevice};
+use sdl2::{audio::AudioDevice, AudioSubsystem};
 
 pub const SAMPLE_RATE: u32 = 44100;
 const CHANNEL_COUNT: u8 = 1;
@@ -12,17 +12,17 @@ pub struct AudioCallback {
 
 impl AudioCallback {
     pub fn new_device(audio: &AudioSubsystem) -> AudioDevice<AudioCallback> {
-        audio.open_playback(
-            None,
-            &sdl2::audio::AudioSpecDesired {
-                freq: Some(SAMPLE_RATE as i32),
-                channels: Some(CHANNEL_COUNT),
-                samples: Some(AUDIO_BUFFER_SIZE),
-            },
-            |_| {
-                AudioCallback::new()
-            },
-        ).unwrap()
+        audio
+            .open_playback(
+                None,
+                &sdl2::audio::AudioSpecDesired {
+                    freq: Some(SAMPLE_RATE as i32),
+                    channels: Some(CHANNEL_COUNT),
+                    samples: Some(AUDIO_BUFFER_SIZE),
+                },
+                |_| AudioCallback::new(),
+            )
+            .unwrap()
     }
 
     fn new() -> Self {

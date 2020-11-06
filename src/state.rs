@@ -1,5 +1,5 @@
 use crate::field::{Field, RevealResult};
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
 const FIELD_WIDTH: u8 = 8;
 const FIELD_HEIGHT: u8 = 8;

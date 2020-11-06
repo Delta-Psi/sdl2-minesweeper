@@ -57,8 +57,8 @@ impl Field {
     }
 
     fn populate(&mut self, safe_cell: Option<(u8, u8)>) {
-        let cell_count = self.width as u16 * self.height as u16
-            - if safe_cell.is_some() { 1 } else { 0 };
+        let cell_count =
+            self.width as u16 * self.height as u16 - if safe_cell.is_some() { 1 } else { 0 };
         assert!(self.mine_count <= cell_count);
 
         use rand::distributions::{Distribution, Uniform};
@@ -89,7 +89,7 @@ impl Field {
             }
             remaining -= 1;
         }
-        
+
         self.populated = true;
     }
 

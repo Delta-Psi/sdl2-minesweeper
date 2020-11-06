@@ -13,7 +13,7 @@ use sfx::SOUND_EFFECTS;
 pub mod state;
 use state::State;
 
-use sdl2::{event::Event, render::WindowCanvas, Sdl, audio::AudioDevice};
+use sdl2::{audio::AudioDevice, event::Event, render::WindowCanvas, Sdl};
 
 const WINDOW_WIDTH: u32 = 480;
 const WINDOW_HEIGHT: u32 = 480;
@@ -107,7 +107,7 @@ impl Game {
                 let (x, y) = self.map_window_coords(x, y);
 
                 if mouse_btn == MouseButton::Right {
-                        self.state.toggle_flag(x, y);
+                    self.state.toggle_flag(x, y);
                 }
             }
 
