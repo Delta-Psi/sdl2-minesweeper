@@ -18,6 +18,8 @@ const FIELD_HEIGHT: u8 = 8;
 const MINE_COUNT: u16 = 10;
 
 const SAMPLE_RATE: u32 = 44100;
+const CHANNEL_COUNT: u8 = 1;
+const AUDIO_BUFFER_SIZE: u16 = 512;
 
 #[derive(Debug)]
 pub struct AudioCallback {
@@ -132,8 +134,8 @@ impl Game {
             None,
             &sdl2::audio::AudioSpecDesired {
                 freq: Some(SAMPLE_RATE as i32),
-                channels: Some(2),
-                samples: None,
+                channels: Some(CHANNEL_COUNT),
+                samples: Some(AUDIO_BUFFER_SIZE),
             },
             |_| {
                 AudioCallback::new()
