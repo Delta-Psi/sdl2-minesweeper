@@ -1,6 +1,9 @@
 use sdl2::render::{Texture, TextureCreator, WindowCanvas};
 use sdl2::video::WindowContext;
 
+const BIT_DEPTH: png::BitDepth = png::BitDepth::Eight;
+const COLOR_TYPE: png::ColorType = png::ColorType::RGBA;
+
 pub struct Textures {
     _texture_creator: TextureCreator<WindowContext>,
 
@@ -52,8 +55,8 @@ impl Textures {
         reader.next_frame(&mut buf).unwrap();
 
         // ensure the format is standard
-        assert_eq!(info.bit_depth, png::BitDepth::Eight);
-        assert_eq!(info.color_type, png::ColorType::RGBA);
+        assert_eq!(info.bit_depth, BIT_DEPTH);
+        assert_eq!(info.color_type, COLOR_TYPE);
 
         let surface = sdl2::surface::Surface::from_data(
             &mut buf,

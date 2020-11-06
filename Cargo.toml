@@ -1,14 +1,16 @@
 [package]
-name = "sdl2-minesweeper"
-version = "0.1.0"
 authors = ["Delta-Psi <delta.psi00@gmail.com>"]
 edition = "2018"
+name = "sdl2-minesweeper"
+version = "0.1.0"
 
 [dependencies]
-rand = "0.7.3"
-png = "0.16.7"
 gl = "0.14.0"
+lazy_static = "1.4.0"
+lewton = "0.10.1"
+png = "0.16.7"
+rand = "0.7.3"
 
 [dependencies.sdl2]
-version = "0.34.3"
 features = ["unsafe_textures", "bundled", "static-link"]
+version = "0.34.3"
