@@ -4,12 +4,14 @@ const CHANNEL_COUNT: u8 = 1;
 
 pub struct SoundEffects {
     pub dig: Vec<i16>,
+    pub boom: Vec<i16>,
 }
 
 impl SoundEffects {
     pub fn new() -> Self {
         Self {
             dig: SoundEffects::load(include_bytes!("sfx/dig.ogg")),
+            boom: SoundEffects::load(include_bytes!("sfx/boom.ogg")),
         }
     }
 

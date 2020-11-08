@@ -124,6 +124,12 @@ impl Game {
                             drop(audio_callback);
                         }
 
+                        RevealResult::Mine => {
+                            let mut audio_callback = self.audio_device.lock();
+                            audio_callback.play_sound_effect(&SOUND_EFFECTS.boom);
+                            drop(audio_callback);
+                        }
+
                         _ => (),
                     }
                 }
