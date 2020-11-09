@@ -13,6 +13,10 @@ use sfx::SOUND_EFFECTS;
 pub mod state;
 use state::State;
 
+pub mod particles;
+use particles::{Particle, ParticleManager};
+
+use std::time::Instant;
 use sdl2::{audio::AudioDevice, event::Event, render::WindowCanvas, Sdl};
 
 const WINDOW_WIDTH: u32 = 480;
@@ -29,6 +33,7 @@ pub struct Game {
 
     state: State,
     hovering: Option<(u8, u8)>,
+    particle_manager: ParticleManager,
 }
 
 impl Game {
@@ -51,6 +56,8 @@ impl Game {
         let audio = sdl.audio().unwrap();
         let audio_device = AudioCallback::new_device(&audio);
 
+        let particle_manager = ParticleManager::new(&canvas);
+
         Game {
             sdl,
             canvas,
@@ -62,6 +69,8 @@ impl Game {
 
             state: State::new(),
             hovering: None,
+
+            particle_manager,
         }
     }
 
@@ -70,14 +79,17 @@ impl Game {
         self.audio_device.resume();
         self.running = true;
 
+        let mut last_update = Instant::now();
         let mut event_pump = self.sdl.event_pump().unwrap();
         while self.running {
             for event in event_pump.poll_iter() {
                 self.event_handler(event);
             }
 
-            self.update();
             self.render();
+            let now = Instant::now();
+            self.update((now - last_update).as_secs_f32());
+            last_update = now;
         }
     }
 
@@ -122,6 +134,29 @@ impl Game {
                             let mut audio_callback = self.audio_device.lock();
                             audio_callback.play_sound_effect(&SOUND_EFFECTS.dig);
                             drop(audio_callback);
+
+                            let px = (x as f32 + 0.5) / self.state.field().width() as f32 * WINDOW_WIDTH as f32;
+                            let py = (y as f32 + 0.5) / self.state.field().height() as f32 * WINDOW_HEIGHT as f32;
+                            self.particle_manager.spawn(Particle {
+                                pos: (px, py),
+                                vel: (-100.0, -200.0),
+
+                                rot: 0.0,
+                                angular_vel: -2.0,
+
+                                max_lifetime: 0.75,
+                                lifetime: 0.75,
+                            });
+                            self.particle_manager.spawn(Particle {
+                                pos: (px, py),
+                                vel: (100.0, -200.0),
+
+                                rot: 0.0,
+                                angular_vel: 2.0,
+
+                                max_lifetime: 0.75,
+                                lifetime: 0.75,
+                            });
                         }
 
                         RevealResult::Mine => {
@@ -139,7 +174,7 @@ impl Game {
         }
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, delta: f32) {
         let timer = self.state.timer().as_secs();
         let mines_remaining = self.state.mines_remaining();
 
@@ -152,6 +187,8 @@ impl Game {
                 mines_remaining,
             ))
             .unwrap();
+
+        self.particle_manager.update(delta);
     }
 
     fn render(&mut self) {
@@ -201,6 +238,8 @@ impl Game {
                     .unwrap();
             }
         }
+
+        self.particle_manager.render(&mut self.canvas);
 
         self.canvas.present();
     }
