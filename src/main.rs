@@ -38,12 +38,14 @@ pub struct Game {
 
 impl Game {
     pub fn new() -> Self {
+        // so we can properly bind the textures
+        sdl2::hint::set("SDL_RENDER_DRIVER", "opengl");
+
         let sdl = sdl2::init().unwrap();
         let video = sdl.video().unwrap();
 
-        // this is so we can bind textures to opengl
-        #[cfg(target_os = "windows")]
-        sdl2::hint::set("SDL_HINT_RENDER_DRIVER", "opengles2");
+        video.gl_load_library_default().unwrap();
+        gl::load_with(|s| video.gl_get_proc_address(s) as *const _);
 
         let window = video
             .window("sdl2 minesweeper", WINDOW_WIDTH, WINDOW_HEIGHT)
@@ -52,8 +54,6 @@ impl Game {
             .build()
             .unwrap();
         let canvas = window.into_canvas().present_vsync().build().unwrap();
-
-        gl::load_with(|s| video.gl_get_proc_address(s) as *const _);
 
         let textures = Textures::new(&canvas);
 

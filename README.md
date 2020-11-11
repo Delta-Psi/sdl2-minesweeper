@@ -1,3 +1,5 @@
 # sdl2 minesweeper
 
-`cargo run` will run the game.
+Run with `cargo run`.
+
+![screenshot of the game](screenshot.png)
