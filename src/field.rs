@@ -132,6 +132,25 @@ impl Field {
         x as usize + y as usize * self.width as usize
     }
 
+    fn reveal_recursive(&mut self, x: u8, y: u8, revealed: &mut Vec<(u8, u8)>) {
+        let cell = self.get_cell_mut(x, y);
+        if cell.revealed || cell.flagged {
+            return;
+        }
+
+        assert!(!cell.has_mine);
+        cell.revealed = true;
+        revealed.push((x, y));
+
+        if cell.neighboring_mines == 0 {
+            for x in x.saturating_sub(1)..=(x + 1).min(self.width - 1) {
+                for y in y.saturating_sub(1)..=(y + 1).min(self.height - 1) {
+                    self.reveal_recursive(x, y, revealed);
+                }
+            }
+        }
+    }
+
     pub fn reveal(&mut self, x: u8, y: u8) -> RevealResult {
         if !self.populated {
             self.populate(Some((x, y)));
@@ -150,11 +169,7 @@ impl Field {
                 
             for x in x.saturating_sub(1)..=(x + 1).min(self.width - 1) {
                 for y in y.saturating_sub(1)..=(y + 1).min(self.height - 1) {
-                    match self.reveal(x, y) {
-                        RevealResult::Success(mut revealed_sub) => revealed.append(&mut revealed_sub),
-                        RevealResult::Nothing => (),
-                        RevealResult::Mine => unreachable!(),
-                    }
+                    self.reveal_recursive(x, y, &mut revealed);
                 }
             }
 

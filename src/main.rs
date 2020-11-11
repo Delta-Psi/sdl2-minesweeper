@@ -144,14 +144,16 @@ impl Game {
                                 let py_upp = (y as f32 + 1.0) / self.state.field().height() as f32 * WINDOW_HEIGHT as f32;
 
                                 for _ in 0 .. rng.gen_range(2, 5) {
-                                    let px = rng.gen_range(px_low, px_upp);
-                                    let py = rng.gen_range(py_low, py_upp);
+                                    //let px = rng.gen_range(px_low, px_upp);
+                                    let px = (px_low + px_upp)/2.0;
+                                    //let py = rng.gen_range(py_low, py_upp);
+                                    let py = (py_low + py_upp)/2.0;
                                     let pos = (px, py);
 
                                     let direction = rng.gen_range(0.0, std::f32::consts::TAU);
 
                                     let particle = Particle::new(pos, 0.75)
-                                        .with_direction(direction, 300.0);
+                                        .with_direction(direction, 200.0);
                                     self.particle_manager.spawn(particle);
                                 }
                             }
