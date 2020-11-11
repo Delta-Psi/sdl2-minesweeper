@@ -130,7 +130,7 @@ impl Game {
                     let (x, y) = self.map_window_coords(x, y);
 
                     match self.state.reveal(x, y) {
-                        RevealResult::Success => {
+                        RevealResult::Success(_) => {
                             let mut audio_callback = self.audio_device.lock();
                             audio_callback.play_sound_effect(&SOUND_EFFECTS.dig);
                             drop(audio_callback);

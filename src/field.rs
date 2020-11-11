@@ -20,7 +20,7 @@ impl Default for Cell {
 #[derive(Debug)]
 pub enum RevealResult {
     Nothing,
-    Success,
+    Success(Vec<(u8, u8)>),
     Mine,
 }
 
@@ -146,15 +146,21 @@ impl Field {
         if cell.has_mine {
             RevealResult::Mine
         } else if cell.neighboring_mines == 0 {
+            let mut revealed = vec![(x, y)];
+                
             for x in x.saturating_sub(1)..=(x + 1).min(self.width - 1) {
                 for y in y.saturating_sub(1)..=(y + 1).min(self.height - 1) {
-                    self.reveal(x, y);
+                    match self.reveal(x, y) {
+                        RevealResult::Success(mut revealed_sub) => revealed.append(&mut revealed_sub),
+                        RevealResult::Nothing => (),
+                        RevealResult::Mine => unreachable!(),
+                    }
                 }
             }
 
-            RevealResult::Success
+            RevealResult::Success(revealed)
         } else {
-            RevealResult::Success
+            RevealResult::Success(vec![(x, y)])
         }
     }
 
