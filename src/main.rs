@@ -41,6 +41,10 @@ impl Game {
         let sdl = sdl2::init().unwrap();
         let video = sdl.video().unwrap();
 
+        // this is so we can bind textures to opengl
+        #[cfg(target_os = "windows")]
+        sdl2::hint::set("SDL_HINT_RENDER_DRIVER", "opengles2");
+
         let window = video
             .window("sdl2 minesweeper", WINDOW_WIDTH, WINDOW_HEIGHT)
             .opengl()
