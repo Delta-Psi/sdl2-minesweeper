@@ -130,33 +130,31 @@ impl Game {
                     let (x, y) = self.map_window_coords(x, y);
 
                     match self.state.reveal(x, y) {
-                        RevealResult::Success(_) => {
+                        RevealResult::Success(revealed) => {
                             let mut audio_callback = self.audio_device.lock();
                             audio_callback.play_sound_effect(&SOUND_EFFECTS.dig);
                             drop(audio_callback);
 
-                            let px = (x as f32 + 0.5) / self.state.field().width() as f32 * WINDOW_WIDTH as f32;
-                            let py = (y as f32 + 0.5) / self.state.field().height() as f32 * WINDOW_HEIGHT as f32;
-                            self.particle_manager.spawn(Particle {
-                                pos: (px, py),
-                                vel: (-100.0, -200.0),
+                            use rand::Rng;
+                            let mut rng = rand::thread_rng();
+                            for (x, y) in revealed {
+                                let px_low = (x as f32) / self.state.field().width() as f32 * WINDOW_WIDTH as f32;
+                                let px_upp = (x as f32 + 1.0) / self.state.field().width() as f32 * WINDOW_WIDTH as f32;
+                                let py_low = (y as f32) / self.state.field().height() as f32 * WINDOW_HEIGHT as f32;
+                                let py_upp = (y as f32 + 1.0) / self.state.field().height() as f32 * WINDOW_HEIGHT as f32;
 
-                                rot: 0.0,
-                                angular_vel: -2.0,
+                                for _ in 0 .. rng.gen_range(2, 5) {
+                                    let px = rng.gen_range(px_low, px_upp);
+                                    let py = rng.gen_range(py_low, py_upp);
+                                    let pos = (px, py);
 
-                                max_lifetime: 0.75,
-                                lifetime: 0.75,
-                            });
-                            self.particle_manager.spawn(Particle {
-                                pos: (px, py),
-                                vel: (100.0, -200.0),
+                                    let direction = rng.gen_range(0.0, std::f32::consts::TAU);
 
-                                rot: 0.0,
-                                angular_vel: 2.0,
-
-                                max_lifetime: 0.75,
-                                lifetime: 0.75,
-                            });
+                                    let particle = Particle::new(pos, 0.75)
+                                        .with_direction(direction, 300.0);
+                                    self.particle_manager.spawn(particle);
+                                }
+                            }
                         }
 
                         RevealResult::Mine => {

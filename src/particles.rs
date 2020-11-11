@@ -22,6 +22,26 @@ pub struct Particle {
 }
 
 impl Particle {
+    pub fn new(pos: (f32, f32), lifetime: f32) -> Self {
+        Self {
+            pos,
+            vel: (0.0, 0.0),
+
+            rot: 0.0,
+            angular_vel: 0.0,
+
+            max_lifetime: lifetime,
+            lifetime: lifetime,
+        }
+    }
+
+    pub fn with_direction(mut self, angle: f32, vel: f32) -> Self {
+        self.vel.0 = angle.sin() * vel;
+        self.vel.1 = -angle.cos() * vel;
+
+        self
+    }
+    
     pub fn update(&mut self, delta: f32) {
         self.pos.0 += delta * self.vel.0;
         self.pos.1 += delta * (self.vel.1 + delta*0.5*PARTICLE_GRAVITY);
@@ -77,6 +97,12 @@ impl ParticleManager {
     pub fn spawn(&mut self, p: Particle) {
         if self.particles.len() < MAX_PARTICLE_COUNT {
             self.particles.push(p);
+        }
+    }
+
+    pub fn spawn_with<F: FnMut() -> Particle>(&mut self, amt: usize, mut f: F) {
+        for _ in 0..amt {
+            self.spawn(f());
         }
     }
 
