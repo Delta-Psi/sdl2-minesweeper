@@ -17,9 +17,9 @@ pub mod particles;
 use particles::{Particle, ParticleManager};
 
 use std::time::Instant;
-use sdl2::{audio::AudioDevice, event::Event, render::WindowCanvas, Sdl};
+use sdl2::{audio::AudioDevice, event::Event, render::WindowCanvas, Sdl, rect::Rect};
 
-const WINDOW_WIDTH: u32 = 480;
+const WINDOW_WIDTH: u32 = 640;
 const WINDOW_HEIGHT: u32 = 480;
 
 pub struct Game {
@@ -97,11 +97,39 @@ impl Game {
         }
     }
 
-    fn map_window_coords(&self, x: i32, y: i32) -> (u8, u8) {
-        (
-            (x as u32 * self.state.field().width() as u32 / WINDOW_WIDTH) as u8,
-            (y as u32 * self.state.field().height() as u32 / WINDOW_HEIGHT) as u8,
+    fn field_render_bounds(&self) -> Rect {
+        // NOTE: assumes fw/fh < ww/wh
+        let (win_w, win_h) = self.canvas.window().size();
+        let field_w = self.state.field().width() as u32;
+        let field_h = self.state.field().height() as u32;
+
+        let cell_size = win_h / field_h;
+
+        Rect::new(
+            (win_w as i32 - cell_size as i32*field_w as i32) / 2,
+            0,
+            cell_size*field_w,
+            win_h,
         )
+    }
+
+    fn map_window_coords(&self, x: i32, y: i32) -> Option<(u8, u8)> {
+        let render_bounds = self.field_render_bounds();
+
+        let x = x - render_bounds.x;
+        if x < 0 || x >= render_bounds.width() as i32 {
+            return None;
+        }
+
+        let y = y - render_bounds.y;
+        if y < 0 || y >= render_bounds.height() as i32 {
+            return None;
+        }
+
+        Some((
+            (x as u32 * self.state.field().width() as u32 / render_bounds.width() as u32) as u8,
+            (y as u32 * self.state.field().height() as u32 / render_bounds.height() as u32) as u8,
+        ))
     }
 
     fn event_handler(&mut self, event: Event) {
@@ -113,17 +141,16 @@ impl Game {
             }
 
             Event::MouseMotion { x, y, .. } => {
-                let (x, y) = self.map_window_coords(x, y);
-                self.hovering = Some((x, y));
+                self.hovering = self.map_window_coords(x, y);
             }
 
             Event::MouseButtonDown {
                 mouse_btn, x, y, ..
             } => {
-                let (x, y) = self.map_window_coords(x, y);
-
-                if mouse_btn == MouseButton::Right {
-                    self.state.toggle_flag(x, y);
+                if let Some((x, y)) = self.map_window_coords(x, y) {
+                    if mouse_btn == MouseButton::Right {
+                        self.state.toggle_flag(x, y);
+                    }
                 }
             }
 
@@ -131,45 +158,42 @@ impl Game {
                 mouse_btn, x, y, ..
             } => {
                 if mouse_btn == MouseButton::Left {
-                    let (x, y) = self.map_window_coords(x, y);
+                    match self.map_window_coords(x, y) {
+                        None => (),
+                        Some((x, y)) => match self.state.reveal(x, y) {
+                            RevealResult::Success(revealed) => {
+                                let mut audio_callback = self.audio_device.lock();
+                                audio_callback.play_sound_effect(&SOUND_EFFECTS.dig);
+                                drop(audio_callback);
 
-                    match self.state.reveal(x, y) {
-                        RevealResult::Success(revealed) => {
-                            let mut audio_callback = self.audio_device.lock();
-                            audio_callback.play_sound_effect(&SOUND_EFFECTS.dig);
-                            drop(audio_callback);
+                                let render_bounds = self.field_render_bounds();
 
-                            use rand::Rng;
-                            let mut rng = rand::thread_rng();
-                            for (x, y) in revealed {
-                                let px_low = (x as f32) / self.state.field().width() as f32 * WINDOW_WIDTH as f32;
-                                let px_upp = (x as f32 + 1.0) / self.state.field().width() as f32 * WINDOW_WIDTH as f32;
-                                let py_low = (y as f32) / self.state.field().height() as f32 * WINDOW_HEIGHT as f32;
-                                let py_upp = (y as f32 + 1.0) / self.state.field().height() as f32 * WINDOW_HEIGHT as f32;
+                                use rand::Rng;
+                                let mut rng = rand::thread_rng();
+                                for (x, y) in revealed {
+                                    let px = render_bounds.left() as f32 + (x as f32 + 0.5) / self.state.field().width() as f32 * render_bounds.width() as f32;
+                                    let py = render_bounds.top() as f32 + (y as f32 + 0.5) / self.state.field().height() as f32 * render_bounds.height() as f32;
 
-                                for _ in 0 .. rng.gen_range(2, 5) {
-                                    //let px = rng.gen_range(px_low, px_upp);
-                                    let px = (px_low + px_upp)/2.0;
-                                    //let py = rng.gen_range(py_low, py_upp);
-                                    let py = (py_low + py_upp)/2.0;
-                                    let pos = (px, py);
+                                    for _ in 0 .. rng.gen_range(2, 5) {
+                                        let pos = (px, py);
 
-                                    let direction = rng.gen_range(0.0, std::f32::consts::TAU);
+                                        let direction = rng.gen_range(0.0, std::f32::consts::TAU);
 
-                                    let particle = Particle::new(pos, 0.75)
-                                        .with_direction(direction, 200.0);
-                                    self.particle_manager.spawn(particle);
+                                        let particle = Particle::new(pos, 0.75)
+                                            .with_direction(direction, 200.0);
+                                        self.particle_manager.spawn(particle);
+                                    }
                                 }
                             }
-                        }
 
-                        RevealResult::Mine => {
-                            let mut audio_callback = self.audio_device.lock();
-                            audio_callback.play_sound_effect(&SOUND_EFFECTS.boom);
-                            drop(audio_callback);
-                        }
+                            RevealResult::Mine => {
+                                let mut audio_callback = self.audio_device.lock();
+                                audio_callback.play_sound_effect(&SOUND_EFFECTS.boom);
+                                drop(audio_callback);
+                            }
 
-                        _ => (),
+                            _ => (),
+                        }
                     }
                 }
             }
@@ -201,6 +225,7 @@ impl Game {
 
         let field_width = self.state.field().width();
         let field_height = self.state.field().height();
+        let bounds = self.field_render_bounds();
 
         for x in 0..field_width {
             for y in 0..field_height {
@@ -228,10 +253,10 @@ impl Game {
                     &self.textures.unrevealed
                 };
 
-                let origin_x = x as i32 * WINDOW_WIDTH as i32 / field_width as i32;
-                let origin_y = y as i32 * WINDOW_HEIGHT as i32 / field_height as i32;
-                let bounds_x = WINDOW_WIDTH / field_width as u32;
-                let bounds_y = WINDOW_HEIGHT / field_height as u32;
+                let origin_x = bounds.left() + x as i32 * bounds.width() as i32 / field_width as i32;
+                let origin_y = bounds.top() + y as i32 * bounds.height() as i32 / field_height as i32;
+                let bounds_x = bounds.width() / field_width as u32;
+                let bounds_y = bounds.height() / field_height as u32;
 
                 self.canvas
                     .copy(
