@@ -55,6 +55,7 @@ impl Game {
             .window("sdl2 minesweeper", WINDOW_WIDTH, WINDOW_HEIGHT)
             .opengl()
             .hidden()
+            .resizable()
             .build()
             .unwrap();
         let canvas = window.into_canvas().present_vsync().build().unwrap();
@@ -125,11 +126,20 @@ impl Game {
     }
 
     fn event_handler(&mut self, event: Event) {
+        use sdl2::event::WindowEvent;
         use sdl2::mouse::MouseButton;
 
         match event {
             Event::Quit { .. } => {
                 self.running = false;
+            }
+
+            Event::Window { win_event, .. } => match win_event {
+                WindowEvent::Resized(w, h) => {
+                    self.layout.recalculate((w as u32, h as u32), self.state.field().size());
+                }
+
+                _ => (),
             }
 
             Event::MouseMotion { x, y, .. } => {
@@ -217,7 +227,6 @@ impl Game {
 
         let field_width = self.state.field().width();
         let field_height = self.state.field().height();
-        let bounds = self.layout.field_rect();
 
         for x in 0..field_width {
             for y in 0..field_height {
@@ -245,16 +254,11 @@ impl Game {
                     &self.textures.unrevealed
                 };
 
-                let origin_x = bounds.left() + x as i32 * bounds.width() as i32 / field_width as i32;
-                let origin_y = bounds.top() + y as i32 * bounds.height() as i32 / field_height as i32;
-                let bounds_x = bounds.width() / field_width as u32;
-                let bounds_y = bounds.height() / field_height as u32;
-
                 self.canvas
                     .copy(
                         texture,
                         None,
-                        Some((origin_x, origin_y, bounds_x, bounds_y).into()),
+                        Some(self.layout.cell_rect((x, y))),
                     )
                     .unwrap();
             }
