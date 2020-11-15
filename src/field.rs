@@ -116,6 +116,10 @@ impl Field {
         self.height
     }
 
+    pub fn size(&self) -> (u8, u8) {
+        (self.width, self.height)
+    }
+
     pub fn get_cell(&self, x: u8, y: u8) -> &Cell {
         &self.cells[self.cell_index(x, y)]
     }

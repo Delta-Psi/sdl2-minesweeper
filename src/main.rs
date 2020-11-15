@@ -16,8 +16,11 @@ use state::State;
 pub mod particles;
 use particles::{Particle, ParticleManager};
 
+pub mod layout;
+use layout::FieldLayout;
+
 use std::time::Instant;
-use sdl2::{audio::AudioDevice, event::Event, render::WindowCanvas, Sdl, rect::Rect};
+use sdl2::{audio::AudioDevice, event::Event, render::WindowCanvas, Sdl};
 
 const WINDOW_WIDTH: u32 = 640;
 const WINDOW_HEIGHT: u32 = 480;
@@ -31,6 +34,7 @@ pub struct Game {
 
     running: bool,
 
+    layout: FieldLayout,
     state: State,
     hovering: Option<(u8, u8)>,
     particle_manager: ParticleManager,
@@ -62,6 +66,9 @@ impl Game {
 
         let particle_manager = ParticleManager::new(&canvas);
 
+        let state = State::new();
+        let layout = FieldLayout::new((WINDOW_WIDTH, WINDOW_HEIGHT), state.field().size());
+
         Game {
             sdl,
             canvas,
@@ -71,7 +78,8 @@ impl Game {
 
             running: false,
 
-            state: State::new(),
+            layout,
+            state,
             hovering: None,
 
             particle_manager,
@@ -97,24 +105,8 @@ impl Game {
         }
     }
 
-    fn field_render_bounds(&self) -> Rect {
-        // NOTE: assumes fw/fh < ww/wh
-        let (win_w, win_h) = self.canvas.window().size();
-        let field_w = self.state.field().width() as u32;
-        let field_h = self.state.field().height() as u32;
-
-        let cell_size = win_h / field_h;
-
-        Rect::new(
-            (win_w as i32 - cell_size as i32*field_w as i32) / 2,
-            0,
-            cell_size*field_w,
-            win_h,
-        )
-    }
-
     fn map_window_coords(&self, x: i32, y: i32) -> Option<(u8, u8)> {
-        let render_bounds = self.field_render_bounds();
+        let render_bounds = self.layout.field_rect();
 
         let x = x - render_bounds.x;
         if x < 0 || x >= render_bounds.width() as i32 {
@@ -166,13 +158,13 @@ impl Game {
                                 audio_callback.play_sound_effect(&SOUND_EFFECTS.dig);
                                 drop(audio_callback);
 
-                                let render_bounds = self.field_render_bounds();
+                                let render_rect = self.layout.field_rect();
 
                                 use rand::Rng;
                                 let mut rng = rand::thread_rng();
                                 for (x, y) in revealed {
-                                    let px = render_bounds.left() as f32 + (x as f32 + 0.5) / self.state.field().width() as f32 * render_bounds.width() as f32;
-                                    let py = render_bounds.top() as f32 + (y as f32 + 0.5) / self.state.field().height() as f32 * render_bounds.height() as f32;
+                                    let px = render_rect.left() as f32 + (x as f32 + 0.5) / self.state.field().width() as f32 * render_rect.width() as f32;
+                                    let py = render_rect.top() as f32 + (y as f32 + 0.5) / self.state.field().height() as f32 * render_rect.height() as f32;
 
                                     for _ in 0 .. rng.gen_range(2, 5) {
                                         let pos = (px, py);
@@ -225,7 +217,7 @@ impl Game {
 
         let field_width = self.state.field().width();
         let field_height = self.state.field().height();
-        let bounds = self.field_render_bounds();
+        let bounds = self.layout.field_rect();
 
         for x in 0..field_width {
             for y in 0..field_height {
